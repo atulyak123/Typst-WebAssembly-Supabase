@@ -1,0 +1,115 @@
+:root {
+  --bg:          #ffffff;
+  --fg:          #1a1a1a;
+  --pane-bg:     #f5f5f5;
+  --placeholder: #888;
+  --divider:     #d0d0d0;
+  --preview-bg:  #fafafa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:          #111;
+    --fg:          #eaeaea;
+    --pane-bg:     #1e1e1e;
+    --placeholder: #aaa;
+    --divider:     #303030;
+    --preview-bg:  #181818;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:          #111;
+  --fg:          #eaeaea;
+  --pane-bg:     #1e1e1e;
+  --placeholder: #aaa;
+  --divider:     #303030;
+  --preview-bg:  #181818;
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+#app {
+  display: flex;
+  background: var(--pane-bg);
+}
+
+/* Divider line on editor’s right */
+#editor {
+  border-right: 1px solid var(--divider);
+}
+
+/* Set layout split */
+#editor, #preview {
+  flex: 1 1 50%;
+  height: 100%;
+  overflow: auto;
+}
+
+#preview {
+  background: var(--preview-bg);
+}
+
+#editor .cm-editor {
+  height: 100%;
+}
+
+#editor .cm-content {
+  padding-left: 0.75rem;
+}
+
+.placeholder {
+  display: grid;
+  place-content: center;
+  height: 100%;
+  color: var(--placeholder);
+  font-size: 1.2rem;
+  font-style: italic;
+}
+
+/* Theme toggle button */
+#theme-btn {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: var(--fg);
+}
+#export-group {
+  position: fixed;
+  top: 0.75rem;
+  right: 3.5rem;        
+  display: flex;
+  gap: 0;
+}
+
+#export-group button {
+  padding: .35rem .6rem;
+  border: 1px solid var(--divider);
+  background: var(--pane-bg);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+#export-menu { width: 1.8rem; } 
+:root[data-theme="dark"] #preview svg text,
+:root[data-theme="dark"] #preview svg tspan {
+  fill: var(--fg) !important;        
+}
+
+:root[data-theme="dark"] #preview svg line,
+:root[data-theme="dark"] #preview svg a rect {
+  fill: none !important;
+  stroke: none !important;
+
+}
