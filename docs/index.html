@@ -7,22 +7,24 @@
     <!-- Typst bundle (loads WASM under the hood) -->
     <script
       type="module"
+      crossorigin="anonymous"
       src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.1-rc1/dist/esm/index.js"
       id="typst"
     ></script>
-    <script type="module" crossorigin src="/Typst-WebAssembly/assets/index-BpNvTOl5.js"></script>
-    <link rel="stylesheet" crossorigin href="/Typst-WebAssembly/assets/index-BMWookP_.css">
+    <script type="module" crossorigin src="/Typst-WebAssembly/assets/index-WyK478MI.js"></script>
+    <link rel="stylesheet" crossorigin href="/Typst-WebAssembly/assets/index-C4mtkT0m.css">
   </head>
 
   <body>
-    <button id="theme-btn" aria-label="toggle theme">🌙</button>
+<button id="theme-btn" aria-label="toggle theme" disabled>🌙</button>
     <div id="export-group">
   <button id="export-btn" aria-label="Download">⬇️</button>
 </div>
 
     <div id="app">
       <div id="editor"></div>
-      <div id="preview"><div class="placeholder">⌛ compiling…</div></div>
+<div id="preview"></div>   
+    </div>
     </div>
 
   </body>

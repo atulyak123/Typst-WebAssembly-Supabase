@@ -8,20 +8,22 @@
     <!-- Typst bundle (loads WASM under the hood) -->
     <script
       type="module"
+      crossorigin="anonymous"
       src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.1-rc1/dist/esm/index.js"
       id="typst"
     ></script>
   </head>
 
   <body>
-    <button id="theme-btn" aria-label="toggle theme">🌙</button>
+<button id="theme-btn" aria-label="toggle theme" disabled>🌙</button>
     <div id="export-group">
   <button id="export-btn" aria-label="Download">⬇️</button>
 </div>
 
     <div id="app">
       <div id="editor"></div>
-      <div id="preview"><div class="placeholder">⌛ compiling…</div></div>
+<div id="preview"></div>   
+    </div>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

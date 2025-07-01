@@ -6,7 +6,6 @@ A lightweight Typst playground in the browser — powered by Vite, CodeMirror, a
 
 - CodeMirror-based live Typst editor
 - Instant SVG rendering from Typst source
-- Dark/light mode toggle (with localStorage preference)
 - Responsive 2-pane layout with divider
 - Vite-powered fast dev server
 
@@ -41,6 +40,10 @@ cd typst-playground
 ├── package.json
 └── README.md
 ```
+
+## Deployment 
+Deployed on GITHUB pages: -  [Typst-WebAssembly](https://atulyak123.github.io/Typst-WebAssembly/)
+
 ### ⚙️ Built With
 
  - Vite
@@ -48,9 +51,6 @@ cd typst-playground
  - @myriaddreamin/typst-all-in-one.ts
  - TypeScript
 
- ### Theme Toggle
-
-Click the 🌙 or ☀ icon in the top right to toggle theme. Preference is saved locally.
 
 ### Tip
 

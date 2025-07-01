@@ -1,12 +1,19 @@
+
 :root {
   --bg:          #ffffff;
   --fg:          #1a1a1a;
   --pane-bg:     #f5f5f5;
   --placeholder: #888;
   --divider:     #d0d0d0;
-  --preview-bg:  #fafafa;
+  /* mid-grey backdrop around the “paper” */
+  --preview-bg:  #cfd0d2;
+
+  /* layout */
+  --pane-gap:  1rem;   /* gap between panes */
+  --radius:    .75rem; /* rounded-corner radius */
 }
 
+/* automatic dark scheme */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg:          #111;
@@ -18,6 +25,7 @@
   }
 }
 
+/* manual dark toggle (data-theme set by JS) */
 :root[data-theme="dark"] {
   --bg:          #111;
   --fg:          #eaeaea;
@@ -27,43 +35,79 @@
   --preview-bg:  #181818;
 }
 
-html, body, #app {
+/* ───────────────────────────────────────────────
+   LAYOUT
+   ─────────────────────────────────────────────── */
+html, body {
   height: 100%;
   margin: 0;
-  font-family: system-ui;
+  overflow: hidden;          /* prevent outer scroll bar */
   background: var(--bg);
   color: var(--fg);
+  font-family: system-ui;
 }
 
 #app {
   display: flex;
+  height: 100vh;
+  overflow: hidden;
+  gap: var(--pane-gap);
   background: var(--pane-bg);
+  padding: var(--pane-gap);
+  box-sizing: border-box;
 }
 
-/* Divider line on editor’s right */
-#editor {
-  border-right: 1px solid var(--divider);
-}
-
-/* Set layout split */
-#editor, #preview {
+/* shared pane style */
+#editor,
+#preview {
   flex: 1 1 50%;
   height: 100%;
   overflow: auto;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
 }
 
+/* editor pane */
+#editor {
+  background: var(--pane-bg);
+}
+
+/* CodeMirror tweaks */
+#editor .cm-editor { height: 100%; }
+#editor .cm-content { padding-left: .75rem; }
+
+/* preview pane */
 #preview {
   background: var(--preview-bg);
+  display: flex;
+  justify-content: center;     /* center “paper” */
+  align-items: flex-start;
+  padding: 2rem;               /* grey margin */
 }
 
-#editor .cm-editor {
-  height: 100%;
+#preview .placeholder::before {
+  content: "";
+  display: block;
+  width: 210mm;
+  height: 297mm;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(0,0,0,.15);
 }
 
-#editor .cm-content {
-  padding-left: 0.75rem;
+
+/* rendered SVG gets its own drop shadow */
+/* rendered SVG page */
+#preview svg {
+  background: #fff;
+  width: 100%;              /* take full pane width …          */
+  max-width: var(--paper-w);/* … but never exceed 210 mm (A4)   */
+  height: auto;             /* keep aspect-ratio                */
+  box-shadow: 0 0 10px rgba(0,0,0,.15);
+  margin-top: 1rem;         /* spacing from top bar             */
 }
 
+/* compiling spinner text */
 .placeholder {
   display: grid;
   place-content: center;
@@ -73,23 +117,29 @@ html, body, #app {
   font-style: italic;
 }
 
-/* Theme toggle button */
+/* theme toggle (optional) */
 #theme-btn {
   position: fixed;
-  top: 0.75rem;
-  right: 0.75rem;
+  top: 1.25rem;
+  right: 2rem;
   background: none;
   border: none;
   font-size: 1.4rem;
   cursor: pointer;
   color: var(--fg);
 }
+
+/* download button group */
 #export-group {
   position: fixed;
-  top: 0.75rem;
-  right: 3.5rem;        
+  top: 1.25rem;
+  right: 5rem;
   display: flex;
-  gap: 0;
+}
+#theme-btn:disabled {
+  opacity: 0.5;           
+  cursor: not-allowed;   
+  pointer-events: none;   
 }
 
 #export-group button {
@@ -98,18 +148,20 @@ html, body, #app {
   background: var(--pane-bg);
   color: var(--fg);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: .9rem;
 }
 
-#export-menu { width: 1.8rem; } 
+#export-menu { width: 1.8rem; }
+
+/* ─── dark-mode SVG overrides ──────────────────── */
 :root[data-theme="dark"] #preview svg text,
 :root[data-theme="dark"] #preview svg tspan {
-  fill: var(--fg) !important;        
+  fill: var(--fg) !important;
 }
 
-:root[data-theme="dark"] #preview svg line,
-:root[data-theme="dark"] #preview svg a rect {
+/* hide link hit-boxes (both themes) */
+#preview svg a rect,
+:root[data-theme="dark"] #preview svg line {
   fill: none !important;
   stroke: none !important;
-
 }

@@ -1,45 +1,56 @@
 /* -------------------------------------------------- */
 /*  Imports                                           */
 /* -------------------------------------------------- */
-import { basicSetup }               from "codemirror";          // meta bundle
-import { EditorState }              from "@codemirror/state";   // typed API
-import { EditorView }               from "@codemirror/view";
+import { basicSetup } from "codemirror";
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 
 /* -------------------------------------------------- */
 /*  Initial document                                  */
 /* -------------------------------------------------- */
-const initialDoc = `= Hello, Typst!
-
-This playground compiles Typst to **SVG** live.
-
-* Edit on the left
-* See SVG on the right
-`;
+const initialDoc = ``;
 
 /* -------------------------------------------------- */
 /*  Compile + render helpers                          */
 /* -------------------------------------------------- */
 type TypstModule = {
   svg: (args: { mainContent: string }) => Promise<string>;
-  /** Raw PDF bytes */
   pdf: (args: { mainContent: string }) => Promise<Uint8Array>;
 };
 declare const $typst: TypstModule;
-const preview = document.getElementById("preview")!;
+
+const preview = document.getElementById("preview")! as HTMLDivElement;
+
+/* ―― ❶ helper so we can reuse the same placeholder ――――――――――――― */
+const showPlaceholder = () => {
+  preview.innerHTML = `<div class="placeholder"></div>`;
+};
+
+/* show it on first load */
+showPlaceholder();
+
 function compileAndRender(src: string) {
   preview.innerHTML = `<div class="placeholder">⌛ compiling…</div>`;
   $typst.svg({ mainContent: src })
-        .then(svg => (preview.innerHTML = svg))
-        .catch(err => {
-          preview.innerHTML = `<pre style="color:red">${err}</pre>`;
-          console.error(err);
-        });
+    .then(svg => (preview.innerHTML = svg))
+    .catch(err => {
+      preview.innerHTML = `<pre style="color:red">${err}</pre>`;
+      console.error(err);
+    });
 }
+
 /*  Simple debounce */
 let timer: number | undefined;
 const debounceRender = (text: string) => {
   clearTimeout(timer);
-  timer = window.setTimeout(() => compileAndRender(text), 300);
+  timer = window.setTimeout(() => {
+    const clean = text.trim();
+    if (clean.length) {
+      compileAndRender(clean);
+    } else {
+      showPlaceholder();           /* ―― ❷ on empty editor ―― */
+    }
+  }, 300);
 };
 
 /* -------------------------------------------------- */
@@ -51,7 +62,7 @@ const updateListener = EditorView.updateListener.of(u => {
 
 const view = new EditorView({
   state: EditorState.create({
-    doc:        initialDoc,
+    doc: initialDoc,
     extensions: [basicSetup, updateListener],
   }),
   parent: document.getElementById("editor")!,
@@ -60,11 +71,21 @@ const view = new EditorView({
 /* -------------------------------------------------- */
 /*  First render once Typst WASM is ready             */
 /* -------------------------------------------------- */
-(document.getElementById("typst") as HTMLScriptElement)
-  .addEventListener("load", () => compileAndRender(initialDoc));
+(document.getElementById("typst") as HTMLScriptElement).addEventListener(
+  "load",
+  async () => {
+    if (typeof ($typst as any).ready === "object") {
+      await ($typst as any).ready;
+    }
+    /* no compile here – preview already shows placeholder */
+  },
+);
 
+/* -------------------------------------------------- */
+/*  Theme toggle & export logic (unchanged)           */
+/* -------------------------------------------------- */
 const root = document.documentElement;
-const KEY  = "typst-theme";
+const KEY = "typst-theme";
 
 function setTheme(t: "light" | "dark") {
   root.setAttribute("data-theme", t);
@@ -72,33 +93,34 @@ function setTheme(t: "light" | "dark") {
   (document.getElementById("theme-btn") as HTMLButtonElement).textContent =
     t === "dark" ? "☀" : "🌙";
 }
-// initial load
+
 setTheme(
   (localStorage.getItem(KEY) as "light" | "dark" | null) ??
-  (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+    (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
 );
-// click handler
+
 document.getElementById("theme-btn")!.addEventListener("click", () =>
-  setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark")
+  setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark"),
 );
+
 /* -------------------------------------------------- */
-/*  Export PDF                               */
+/*  Export PDF                                        */
 /* -------------------------------------------------- */
 const exportBtn = document.getElementById("export-btn") as HTMLButtonElement;
 
 async function downloadPDF() {
   try {
- const source = view.state.doc.toString();
-const data   = await $typst.pdf({ mainContent: source });
-const blob   = new Blob([data], { type: "application/pdf" });
-const url    = URL.createObjectURL(blob);
-const match  = source.match(/#let\s+name\s*=\s*"(.+?)"/);
-const name   = match ? match[1].split(" ")[0] : "typst-output";
-const a      = document.createElement("a");
-a.href       = url;
-a.download   = `${name}.pdf`;
-a.click();
-URL.revokeObjectURL(url);
+    const source = view.state.doc.toString();
+    const data = await $typst.pdf({ mainContent: source });
+    const blob = new Blob([data], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const match = source.match(/#let\s+name\s*=\s*"(.+?)"/);
+    const name = match ? match[1].split(" ")[0] : "typst-output";
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${name}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   } catch (err) {
     console.error("Export failed", err);
   }
