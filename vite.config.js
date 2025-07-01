@@ -2,5 +2,8 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/Typst-WebAssembly/",
+  base: "/Typst-WebAssembly/", 
+  build: {
+    outDir: "docs",            
+  },
 });
