@@ -31,6 +31,7 @@ cd typst-playground
  ```
  
  ### Project Structure
+ ```bash
  typst-playground/
 ├── index.html             # Main HTML entry
 ├── src/
@@ -39,7 +40,7 @@ cd typst-playground
 ├── vite.config.ts         # Vite config
 ├── package.json
 └── README.md
-
+```
 ### ⚙️ Built With
 
  - Vite
