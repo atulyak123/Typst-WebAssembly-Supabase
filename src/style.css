@@ -1,12 +1,12 @@
-
 :root {
   --bg:          #ffffff;
   --fg:          #1a1a1a;
   --pane-bg:     #f5f5f5;
   --placeholder: #888;
   --divider:     #d0d0d0;
-  /* mid-grey backdrop around the “paper” */
+  /* mid-grey backdrop around the "paper" */
   --preview-bg:  #cfd0d2;
+  --paper-w:     210mm;
 
   /* layout */
   --pane-gap:  1rem;   /* gap between panes */
@@ -41,15 +41,43 @@
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden;          /* prevent outer scroll bar */
+  overflow: hidden;
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui;
 }
 
+#toolbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  display: flex;
+  justify-content: flex-end;
+  gap: .75rem;
+  padding: 0 1rem;
+  background: var(--pane-bg);
+  border-bottom: 1px solid var(--divider);
+  z-index: 1000;
+}
+
+#toolbar button {
+  padding: .35rem .6rem;
+  border: 1px solid var(--divider);
+  background: var(--pane-bg);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: .9rem;
+}
+
+#toolbar button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
 #app {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 48px);
+  margin-top: 48px;
   overflow: hidden;
   gap: var(--pane-gap);
   background: var(--pane-bg);
@@ -62,7 +90,6 @@ html, body {
 #preview {
   flex: 1 1 50%;
   height: 100%;
-  overflow: auto;
   border-radius: var(--radius);
   box-shadow: 0 2px 6px rgba(0,0,0,.08);
 }
@@ -70,98 +97,176 @@ html, body {
 /* editor pane */
 #editor {
   background: var(--pane-bg);
+  overflow: auto;
 }
 
 /* CodeMirror tweaks */
 #editor .cm-editor { height: 100%; }
 #editor .cm-content { padding-left: .75rem; }
 
-/* preview pane */
+/* ===== PREVIEW PANE - UNIFIED STYLES ===== */
 #preview {
   background: var(--preview-bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
   display: flex;
-  justify-content: center;     /* center “paper” */
-  align-items: flex-start;
-  padding: 2rem;               /* grey margin */
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Default placeholder (when no content) */
+#preview .placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--placeholder);
+  font-size: 1.1rem;
+  text-align: center;
+  gap: 1rem;
+  padding: 2rem;
 }
 
 #preview .placeholder::before {
-  content: "";
-  display: block;
-  width: 210mm;
-  height: 297mm;
-  background: #fff;
-  border-radius: 2px;
-  box-shadow: 0 0 10px rgba(0,0,0,.15);
+  content: "📄";
+  font-size: 3rem;
+  opacity: 0.5;
 }
 
-
-/* rendered SVG gets its own drop shadow */
-/* rendered SVG page */
-#preview svg {
-  background: #fff;
-  width: 100%;              /* take full pane width …          */
-  max-width: var(--paper-w);/* … but never exceed 210 mm (A4)   */
-  height: auto;             /* keep aspect-ratio                */
-  box-shadow: 0 0 10px rgba(0,0,0,.15);
-  margin-top: 1rem;         /* spacing from top bar             */
-}
-
-/* compiling spinner text */
-.placeholder {
-  display: grid;
-  place-content: center;
-  height: 100%;
-  color: var(--placeholder);
-  font-size: 1.2rem;
-  font-style: italic;
-}
-
-/* theme toggle (optional) */
-#theme-btn {
-  position: fixed;
-  top: 1.25rem;
-  right: 2rem;
-  background: none;
-  border: none;
-  font-size: 1.4rem;
-  cursor: pointer;
-  color: var(--fg);
-}
-
-/* download button group */
-#export-group {
-  position: fixed;
-  top: 1.25rem;
-  right: 5rem;
+/* Pages container */
+.pages-container {
   display: flex;
-}
-#theme-btn:disabled {
-  opacity: 0.5;           
-  cursor: not-allowed;   
-  pointer-events: none;   
-}
-
-#export-group button {
-  padding: .35rem .6rem;
-  border: 1px solid var(--divider);
-  background: var(--pane-bg);
-  color: var(--fg);
-  cursor: pointer;
-  font-size: .9rem;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+  align-items: center;
+  width: 100%;
+  min-height: 100%;
 }
 
-#export-menu { width: 1.8rem; }
+/* Individual page wrapper */
+.page-wrapper {
+  position: relative;
+  max-width: var(--paper-w);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-/* ─── dark-mode SVG overrides ──────────────────── */
+/* Page container with shadow */
+.svg-page {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 1rem;
+}
+
+.svg-page:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.svg-page svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: white;
+}
+
+/* Page info/number */
+.page-info {
+  margin-top: 1rem;
+  color: var(--placeholder);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ===== SINGLE PAGE FALLBACK ===== */
+/* When there's only one page or original SVG */
+#preview > svg {
+  background: #fff;
+  width: 100%;
+  max-width: var(--paper-w);
+  height: auto;
+  box-shadow: 0 0 10px rgba(0,0,0,.15);
+  margin: 2rem auto;
+  border-radius: 8px;
+}
+
+/* ===== DARK MODE ADJUSTMENTS ===== */
+:root[data-theme="dark"] .svg-page {
+  background: #1e1e1e;
+  border: 1px solid #333;
+}
+
+:root[data-theme="dark"] .svg-page svg {
+  background: #1e1e1e;
+}
+
+:root[data-theme="dark"] #preview > svg {
+  background: #1e1e1e;
+  border: 1px solid #333;
+}
+
+/* Dark mode SVG text */
 :root[data-theme="dark"] #preview svg text,
 :root[data-theme="dark"] #preview svg tspan {
   fill: var(--fg) !important;
 }
 
-/* hide link hit-boxes (both themes) */
+/* Hide link hit-boxes */
 #preview svg a rect,
 :root[data-theme="dark"] #preview svg line {
   fill: none !important;
   stroke: none !important;
 }
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .pages-container {
+    padding: 1rem 0.5rem;
+    gap: 1rem;
+  }
+  
+  .page-wrapper {
+    max-width: 100%;
+  }
+  
+  .svg-page {
+    border-radius: 4px;
+  }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .pages-container {
+    background: white;
+    padding: 0;
+    gap: 0;
+  }
+
+  .svg-page {
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    page-break-after: always;
+  }
+  
+  .svg-page:last-child {
+    page-break-after: avoid;
+  }
+  
+  .page-info {
+    display: none;
+  }
+}
+
+#export-menu { width: 1.8rem; }

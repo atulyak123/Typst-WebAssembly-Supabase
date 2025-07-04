@@ -14,18 +14,22 @@
     ></script>
   </head>
 
-  <body>
-<button id="theme-btn" aria-label="toggle theme" disabled>🌙</button>
-    <div id="export-group">
+<body>
+  <!-- ——— top toolbar ——— -->
+<header id="toolbar">
+    <button id="theme-btn"  aria-label="toggle theme" disabled>🌙</button>
   <button id="export-btn" aria-label="Download">⬇️</button>
-</div>
+</header>
 
-    <div id="app">
-      <div id="editor"></div>
-<div id="preview"></div>   
-    </div>
-    </div>
+  <!-- ——— main panes ——— -->
+  <div id="app">
+    <div id="editor"></div>
+    <div id="preview"></div>
+  </div>
 
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
 </html>
+
+
