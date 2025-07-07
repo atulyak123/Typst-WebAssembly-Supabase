@@ -4,14 +4,10 @@
 import { basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
+import { typstSyntax } from "./typst-lang";
 
 /* -------------------------------------------------- */
-/*  Initial document                                  */
-/* -------------------------------------------------- */
-const initialDoc = ``;
-
-/* -------------------------------------------------- */
-/*  Compile + render helpers                          */
+/*  Types                                             */
 /* -------------------------------------------------- */
 type TypstModule = {
   svg: (args: { mainContent: string }) => Promise<string>;
@@ -19,9 +15,15 @@ type TypstModule = {
 };
 declare const $typst: TypstModule;
 
+/* -------------------------------------------------- */
+/*  Constants & DOM Elements                          */
+/* -------------------------------------------------- */
+const initialDoc = ``;
 const preview = document.getElementById("preview")! as HTMLDivElement;
 
-/* ―― ❶ helper so we can reuse the same placeholder ――――――――――――― */
+/* -------------------------------------------------- */
+/*  UI Functions                                      */
+/* -------------------------------------------------- */
 const showPlaceholder = () => {
   preview.innerHTML = `
     <div class="placeholder">
@@ -29,88 +31,6 @@ const showPlaceholder = () => {
     </div>
   `;
 };
-/* show it on first load */
-showPlaceholder();
-
-function compileAndRender(src: string) {
-  preview.innerHTML = `<div class="placeholder">⌛ compiling…</div>`;
-  
-  $typst.svg({ mainContent: src })
-    .then(svg => {
-      // Extract SVG dimensions
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(svg, 'image/svg+xml');
-      const svgElement = doc.querySelector('svg');
-      
-      if (!svgElement) {
-        displaySinglePage(svg);
-        return;
-      }
-      
-      const viewBox = svgElement.getAttribute('viewBox');
-      if (!viewBox) {
-        displaySinglePage(svg);
-        return;
-      }
-      
-      const [x, y, svgWidth, svgHeight] = viewBox.split(' ').map(Number);      
-      // Smart page detection with better logic
-      const pageAnalysis = analyzePageRequirements(svgHeight);
-      if (pageAnalysis.pages > 1) {
-        createMultiplePages(svgElement, x, y, svgWidth, svgHeight, pageAnalysis.pageHeight);
-      } else {
-        displaySinglePage(svg);
-      }
-    })
-    .catch(err => {
-      preview.innerHTML = `<pre style="color:red; padding: 1rem;">${err}</pre>`;
-      console.error(err);
-    });
-}
-
-function analyzePageRequirements(totalHeight: number): { pages: number, pageHeight: number, reason: string } {
-  // Standard page heights in points
-  const STANDARD_PAGES = [
-    { name: "Letter", height: 792 },
-    { name: "A4", height: 841.89 },
-    { name: "Legal", height: 1008 },
-  ];  
-  // First, check if it's close to a single page
-  for (const page of STANDARD_PAGES) {
-    const singlePageTolerance = page.height * 0.2; // 20% tolerance for single pages
-    
-    if (totalHeight <= page.height + singlePageTolerance) {
-      return {
-        pages: 1,
-        pageHeight: page.height,
-        reason: `Content fits in single ${page.name} page with ${singlePageTolerance.toFixed(0)}pt tolerance`
-      };
-    }
-  }
-  
-  // If not single page, find the best multi-page layout
-  for (const page of STANDARD_PAGES) {
-    const possiblePages = Math.ceil(totalHeight / page.height);
-    const lastPageHeight = totalHeight - ((possiblePages - 1) * page.height);
-    const minLastPageHeight = page.height * 0.3; // Last page must be at least 30% of a full page
-    
-    if (lastPageHeight >= minLastPageHeight) {
-      return {
-        pages: possiblePages,
-        pageHeight: page.height,
-        reason: `${possiblePages} ${page.name} pages, last page has ${lastPageHeight.toFixed(0)}pt content`
-      };
-    } 
-  }
-  
-  // Fallback: use adaptive sizing
-  const adaptiveHeight = totalHeight / 2;  
-  return {
-    pages: 2,
-    pageHeight: adaptiveHeight,
-    reason: `Adaptive sizing with ${adaptiveHeight.toFixed(0)}pt per page`
-  };
-}
 
 function displaySinglePage(svgContent: string) {
   preview.innerHTML = `
@@ -139,6 +59,7 @@ function createMultiplePages(
     const startY = i * pageHeight;
     const endY = Math.min(startY + pageHeight, totalHeight);
     const currentPageHeight = endY - startY;
+    
     html += /* html */ `
       <div class="page-wrapper" data-page="${i + 1}">
         <div class="svg-page">
@@ -157,7 +78,94 @@ function createMultiplePages(
   preview.innerHTML = `<div class="pages-container">${html}</div>`;
 }
 
-/*  Simple debounce */
+/* -------------------------------------------------- */
+/*  Page Analysis Logic                               */
+/* -------------------------------------------------- */
+function analyzePageRequirements(totalHeight: number): { pages: number, pageHeight: number, reason: string } {
+  const STANDARD_PAGES = [
+    { name: "Letter", height: 792 },
+    { name: "A4", height: 841.89 },
+    { name: "Legal", height: 1008 },
+  ];  
+  
+  // Check if it's close to a single page
+  for (const page of STANDARD_PAGES) {
+    const singlePageTolerance = page.height * 0.2;
+    
+    if (totalHeight <= page.height + singlePageTolerance) {
+      return {
+        pages: 1,
+        pageHeight: page.height,
+        reason: `Content fits in single ${page.name} page`
+      };
+    }
+  }
+  
+  // Find best multi-page layout
+  for (const page of STANDARD_PAGES) {
+    const possiblePages = Math.ceil(totalHeight / page.height);
+    const lastPageHeight = totalHeight - ((possiblePages - 1) * page.height);
+    const minLastPageHeight = page.height * 0.3;
+    
+    if (lastPageHeight >= minLastPageHeight) {
+      return {
+        pages: possiblePages,
+        pageHeight: page.height,
+        reason: `${possiblePages} ${page.name} pages`
+      };
+    } 
+  }
+  
+  // Fallback
+  const adaptiveHeight = totalHeight / 2;  
+  return {
+    pages: 2,
+    pageHeight: adaptiveHeight,
+    reason: `Adaptive sizing`
+  };
+}
+
+/* -------------------------------------------------- */
+/*  Core Compilation Logic                            */
+/* -------------------------------------------------- */
+function compileAndRender(src: string) {
+  preview.innerHTML = `<div class="placeholder">⌛ compiling…</div>`;
+  
+  $typst.svg({ mainContent: src })
+    .then(svg => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svg, 'image/svg+xml');
+      const svgElement = doc.querySelector('svg');
+      
+      if (!svgElement) {
+        displaySinglePage(svg);
+        return;
+      }
+      
+      const viewBox = svgElement.getAttribute('viewBox');
+      if (!viewBox) {
+        displaySinglePage(svg);
+        return;
+      }
+      
+      const [x, y, svgWidth, svgHeight] = viewBox.split(' ').map(Number);      
+      const pageAnalysis = analyzePageRequirements(svgHeight);
+      
+      if (pageAnalysis.pages > 1) {
+        createMultiplePages(svgElement, x, y, svgWidth, svgHeight, pageAnalysis.pageHeight);
+      } else {
+        displaySinglePage(svg);
+      }
+    })
+    .catch(err => {
+      preview.innerHTML = `<pre style="color:red; padding: 1rem;">${err}</pre>`;
+      console.error(err);
+    });
+}
+
+/* -------------------------------------------------- */
+/*  Debounced Rendering                               */
+/* -------------------------------------------------- */
 let timer: number | undefined;
 const debounceRender = (text: string) => {
   clearTimeout(timer);
@@ -172,7 +180,7 @@ const debounceRender = (text: string) => {
 };
 
 /* -------------------------------------------------- */
-/*  Editor boot                                       */
+/*  Editor Setup                                      */
 /* -------------------------------------------------- */
 const updateListener = EditorView.updateListener.of(u => {
   if (u.docChanged) debounceRender(u.state.doc.toString());
@@ -181,14 +189,20 @@ const updateListener = EditorView.updateListener.of(u => {
 const view = new EditorView({
   state: EditorState.create({
     doc: initialDoc,
-    extensions: [basicSetup, updateListener],
+    extensions: [
+      basicSetup,
+      ...typstSyntax(),  // 🎨 Import syntax highlighting
+      updateListener,
+    ],
   }),
   parent: document.getElementById("editor")!,
 });
 
 /* -------------------------------------------------- */
-/*  First render once Typst WASM is ready             */
+/*  Initialization                                    */
 /* -------------------------------------------------- */
+showPlaceholder();
+
 (document.getElementById("typst") as HTMLScriptElement).addEventListener(
   "load",
   async () => {
@@ -199,7 +213,7 @@ const view = new EditorView({
 );
 
 /* -------------------------------------------------- */
-/*  Theme toggle & export logic (unchanged)           */
+/*  Theme Management                                  */
 /* -------------------------------------------------- */
 const root = document.documentElement;
 const KEY = "typst-theme";
@@ -221,7 +235,7 @@ document.getElementById("theme-btn")!.addEventListener("click", () =>
 );
 
 /* -------------------------------------------------- */
-/*  Export PDF                                        */
+/*  PDF Export                                        */
 /* -------------------------------------------------- */
 const exportBtn = document.getElementById("export-btn") as HTMLButtonElement;
 
@@ -242,4 +256,5 @@ async function downloadPDF() {
     console.error("Export failed", err);
   }
 }
+
 exportBtn.addEventListener("click", downloadPDF);
