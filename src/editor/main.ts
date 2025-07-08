@@ -4,7 +4,7 @@
 import { basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { typstSyntax } from "./typst-lang";
+import { typstSyntax } from "../typst-lang";
 
 /* -------------------------------------------------- */
 /*  Types                                             */
@@ -18,7 +18,7 @@ declare const $typst: TypstModule;
 /* -------------------------------------------------- */
 /*  Constants & DOM Elements                          */
 /* -------------------------------------------------- */
-const initialDoc = ``;
+const initialDoc: string = (window as any).__initialDoc ?? "";
 const preview = document.getElementById("preview")! as HTMLDivElement;
 
 /* -------------------------------------------------- */
@@ -197,8 +197,9 @@ const view = new EditorView({
   }),
   parent: document.getElementById("editor")!,
 });
+(window as any).__editorView = view; 
 
-/* -------------------------------------------------- */
+/* ------------------------------------------------- */
 /*  Initialization                                    */
 /* -------------------------------------------------- */
 showPlaceholder();
@@ -258,3 +259,40 @@ async function downloadPDF() {
 }
 
 exportBtn.addEventListener("click", downloadPDF);
+async function setupLogoutFunctionality() {
+  try {
+    // Load user info
+    const { getCurrentUser } = await import("../auth/auth");
+    const user = await getCurrentUser();
+    
+    // Display user email in toolbar
+    const userEmailElement = document.getElementById("user-email") as HTMLElement;
+    if (user && userEmailElement) {
+      const emailName = user.email?.split('@')[0] || 'User';
+      userEmailElement.textContent = emailName;
+    }
+
+    // Setup logout button
+    const logoutBtn = document.getElementById("logout-btn") as HTMLButtonElement;
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async () => {
+        // Confirm logout
+        if (confirm("Are you sure you want to sign out?")) {
+          try {
+            const { signOut } = await import("../auth/auth");
+            await signOut();
+            // The onSession listener in index.html will handle the redirect
+          } catch (error) {
+            console.error("Logout failed:", error);
+            alert("Failed to sign out. Please try again.");
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Failed to setup logout functionality:", error);
+  }
+}
+
+// Call this function after your editor is initialized
+setupLogoutFunctionality();

@@ -4,32 +4,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Typst Playground</title>
-    <!-- Typst bundle (loads WASM under the hood) -->
-    <script
-      type="module"
-      crossorigin="anonymous"
+    <!-- global styles (login + playground + dashboard) -->
+    <!-- Typst WASM bundle (unchanged) -->
+    <script type="module" crossorigin
       src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.1-rc1/dist/esm/index.js"
-      id="typst"
-    ></script>
-    <script type="module" crossorigin src="/Typst-WebAssembly/assets/index-BowJhEo-.js"></script>
-    <link rel="stylesheet" crossorigin href="/Typst-WebAssembly/assets/index-j-dzusPu.css">
+      id="typst"></script>
+    <script type="module" crossorigin src="/Typst-WebAssembly/assets/index-DlkAxlcA.js"></script>
+    <link rel="stylesheet" crossorigin href="/Typst-WebAssembly/assets/index-DXgN9zpU.css">
   </head>
+  <body>
+    <!-- single mount point -->
+    <div id="root"></div>
 
-<body>
-  <!-- ——— top toolbar ——— -->
-<header id="toolbar">
-    <button id="theme-btn"  aria-label="toggle theme" disabled>🌙</button>
-  <button id="export-btn" aria-label="Download">⬇️</button>
-</header>
-
-  <!-- ——— main panes ——— -->
-  <div id="app">
-    <div id="editor"></div>
-    <div id="preview"></div>
-  </div>
-
-</body>
-
+    <!-- enhanced router with dashboard -->
+  </body>
 </html>
-
-
