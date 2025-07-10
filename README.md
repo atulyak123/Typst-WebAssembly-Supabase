@@ -4,12 +4,15 @@ A lightweight Typst playground in the browser — powered by Vite, CodeMirror, a
 
 ## ✨ Features
 
-- CodeMirror-based live Typst editor
-- Instant SVG rendering from Typst source
-- Responsive 2-pane layout with divider
-- Vite-powered fast dev server
+- 🔐 **Login via Magic Link using Supabase**
+- 👤 **Authentication-protected Dashboard**
+- ✍️ **Live Typst Editor** with instant SVG rendering
+- 🧭 **React Router** based multi-page navigation (Login, Dashboard, Editor)
+- 💨 Vite-powered fast dev server
+- 🌓 Light/dark responsive 2-pane layout
+- ⚡ Powered by WASM (`@myriaddreamin/typst-all-in-one.ts`)
 
----
+
 
 ## 🚀 Getting Started
 
@@ -28,21 +31,46 @@ cd typst-playground
  ``` bash
  pnpm dev
  ```
+### Create .env File
+
+Add your Supabase credentials:
+```bash
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
  
  ### Project Structure
  ```bash
- typst-playground/
-├── index.html             # Main HTML entry
+Typst-WebAssembly-Supabase/
+├── public/                      # Static assets (favicon, etc.)
 ├── src/
-│   ├── main.ts            # CodeMirror + Typst logic
-│   └── style.css          # Layout and dark/light styles
-├── vite.config.ts         # Vite config
+│   ├── auth/
+│   │   ├── auth.ts              # Auth context logic
+│   │   └── login.ts             # Magic link login UI logic
+│   ├── dashboard/
+│   │   └── dashboard.ts         # Protected dashboard page
+│   ├── editor/
+│   │   └── editor.ts            # Typst editor logic (WIP or live)
+│   ├── lib/
+│   │   ├── supabaseClient.ts    # Supabase client configuration
+│   │   └── projectService.ts    # Utilities or API-related logic
+│   ├── main.ts                  # Entry point (mounts app)
+│   ├── style.css                # Tailwind/global styles
+│   ├── typst.lang.ts            # Typst language configuration
+│   ├── global.d.ts              # Global type declarations
+│   └── vite-env.d.ts            # Vite-specific typings
+├── .env                         # Supabase environment variables
+├── .gitignore
+├── index.html                   # HTML entrypoint
 ├── package.json
+├── pnpm-lock.yaml
+├── tsconfig.json
+├── vite.config.js
 └── README.md
+
 ```
 
-## Deployment 
-Deployed on GITHUB pages: -  [Typst-WebAssembly](https://atulyak123.github.io/Typst-WebAssembly/)
+
 
 ### ⚙️ Built With
 
@@ -50,6 +78,7 @@ Deployed on GITHUB pages: -  [Typst-WebAssembly](https://atulyak123.github.io/Ty
  - CodeMirror 6
  - @myriaddreamin/typst-all-in-one.ts
  - TypeScript
+ - Supabase
 
 
 ### Tip
