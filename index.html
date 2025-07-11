@@ -26,7 +26,7 @@
   const root = document.getElementById("root");
 
   // Define base path to match Vite config
-  const BASE_PATH = "/Typst-WebAssembly";
+const BASE_PATH = "/Typst-WebAssembly-Supabase";
 
   /* ---------- Router Functions ---------- */
   function getCurrentPath() {
@@ -292,7 +292,7 @@ Start typing here...`;
   /* ---------- Initial Auth Gate ---------- */
   getSession().then(({ data }) => {
     console.log('Initial session check:', data.session ? 'logged in' : 'not logged in');
-    
+    window.history.replaceState({}, document.title, window.location.pathname);
     if (data.session) {
       // User is logged in, route them appropriately
       const currentPath = getCurrentPath();
