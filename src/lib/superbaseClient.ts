@@ -8,3 +8,4 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables. Check your .env file.');
 }
 export const supabase = createClient(supabaseUrl, supabaseKey);
+(window as any).supabase = supabase;

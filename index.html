@@ -20,8 +20,8 @@
   import { getSession, onSession } from "/src/auth/auth.ts";
   import { mountLogin } from "/src/auth/login.ts";
   import { mountDashboard } from "/src/dashboard/dashboard.ts";
-  import { supabase } from "/src/lib/superbaseClient";  // ← Fixed: removed .ts
-  import { loadProjectFile, saveProjectFile } from "/src/lib/projectService";  // ← Fixed: removed .ts
+  import { supabase } from "/src/lib/superbaseClient";
+  import { loadProjectFile, saveProjectFile } from "/src/lib/projectService";
   
   const root = document.getElementById("root");
 
@@ -101,66 +101,115 @@
       window.__currentTypPath = null;
     }
   }
+  /* ---------- State Management ---------- */
+function resetEditorState() {
+  console.log('🔄 Resetting editor state...');
+  
+  // Clear global variables
+  window.__initialDoc = "";
+  window.__currentProjectId = null;
+  window.__currentTypPath = null;
+  window.__editorView = null;
+  
+  // Clear any existing compilation timers
+  if (window.__renderTimer) {
+    clearTimeout(window.__renderTimer);
+    window.__renderTimer = null;
+  }
+}
 
-  /* ---------- Enhanced Editor Mounting ---------- */
-  async function mountEditor(projectId = null) {
-    console.log('Mounting editor for project:', projectId);
-    
-    root.innerHTML = `
-      <header id="toolbar">
-        <div class="toolbar-left">
-          <button id="back-btn" class="back-btn" title="Back to Dashboard">
-            ← Dashboard
-          </button>
-          <span id="project-title" class="project-title">
-            ${projectId ? 'Loading project...' : 'New Document'}
-          </span>
-        </div>
-        <div class="toolbar-right">
-          <span id="user-email" class="user-email">Loading...</span>
-          <button id="theme-btn" aria-label="toggle theme">🌙</button>
-          <button id="export-btn" aria-label="Download">⬇️</button>
-          <button id="save-btn" aria-label="Save" class="save-btn" style="display: ${projectId ? 'block' : 'none'}">💾</button>
-          <button id="logout-btn" aria-label="Sign out" class="logout-btn">Logout</button>
-        </div>
-      </header>
-      <div id="app">
-        <div id="editor"></div>
-        <div id="preview"></div>
+/* ---------- Enhanced Editor Mounting ---------- */
+async function mountEditor(projectId = null) {
+  resetEditorState();
+  
+  console.log('Mounting editor for project:', projectId);
+  
+  root.innerHTML = `
+    <header id="toolbar">
+      <div class="toolbar-left">
+        <button id="back-btn" class="back-btn" title="Back to Dashboard">
+          ← Dashboard
+        </button>
+        <span id="project-title" class="project-title">
+          ${projectId ? 'Loading project...' : 'New Document'}
+        </span>
       </div>
-    `;
+      <div class="toolbar-right">
+        <span id="user-email" class="user-email">Loading...</span>
+        <button id="theme-btn" aria-label="toggle theme">🌙</button>
+        <button id="export-btn" aria-label="Download">⬇️</button>
+        <button id="save-btn" aria-label="Save" class="save-btn" style="display: ${projectId ? 'block' : 'none'}">💾</button>
+        <button id="logout-btn" aria-label="Sign out" class="logout-btn">Logout</button>
+      </div>
+    </header>
+    <div id="app">
+      <div id="editor"></div>
+      <div id="preview">
+        <div class="placeholder">
+          <div>${projectId ? 'Loading your document...' : 'Start typing to see preview'}</div>
+        </div>
+      </div>
+    </div>
+  `;
 
-    // Setup navigation
-    setupEditorNavigation();
-    
-    // Load user info
-    await loadUserInfoInEditor();
-    
-    // Load project data if projectId exists
-    if (projectId) {
-      await loadProjectData(projectId);
-    } else {
-      // Set default content for new documents
-      window.__initialDoc = `= New Document
+  // Setup navigation
+  setupEditorNavigation();
+  
+  // Load user info
+  await loadUserInfoInEditor();
+  
+  //  Load project data
+  if (projectId) {
+    console.log('📊 Loading project data...');
+    await loadProjectData(projectId);
+  } else {
+    window.__initialDoc = `= New Document
 
 Welcome to Typst!
 
 Start typing here...`;
-      window.__currentProjectId = null;
-      window.__currentTypPath = null;
-    }
-
-    // Import and initialize editor
-    console.log('Importing editor module...');
-    try {
-      await import("/src/editor/main.ts");
-      console.log('Editor module imported successfully');
-    } catch (error) {
-      console.error('Failed to import editor:', error);
-    }
+    window.__currentProjectId = null;
+    window.__currentTypPath = null;
   }
 
-  function setupEditorNavigation() {
+  //Import editor module
+    // Import editor module
+  console.log('🚀 Importing editor module...');
+  try {
+    await import("/src/editor/main.ts");
+    console.log('✅ Editor module imported successfully');
+
+    const waitUntilReady = async () => {
+      const maxWait = 2000;
+      const pollInterval = 100;
+      let waited = 0;
+
+      while (waited < maxWait) {
+        const ready =
+          document.getElementById("editor") &&
+          typeof window.__initialDoc === "string" &&
+          typeof window.compileAndRender === "function";
+
+        if (ready) break;
+
+        await new Promise((r) => setTimeout(r, pollInterval));
+        waited += pollInterval;
+      }
+
+      if (typeof window.compileAndRender === "function" && window.__initialDoc) {
+        console.log("⏱️ Triggering compileAndRender after wait...");
+        window.compileAndRender(window.__initialDoc);
+      }
+    };
+
+    waitUntilReady();
+
+  } catch (error) {
+    console.error('❌ Failed to import editor:', error);
+  }
+
+}
+   function setupEditorNavigation() {
     // Back to dashboard button
     const backBtn = document.getElementById("back-btn");
     backBtn?.addEventListener("click", () => {
@@ -180,27 +229,7 @@ Start typing here...`;
       }
     });
 
-    // Save functionality
-    const saveBtn = document.getElementById("save-btn");
-saveBtn?.addEventListener("click", async () => {
-  try {
-    const typPath = window.__currentTypPath;
-    const projectId = window.__currentProjectId;
-    const code = window.__editorView?.state?.doc?.toString() ?? "";
-
-    if (!code.trim()) {
-      alert("No content to save");
-      return;
-    }
-
-    await saveProjectFile(projectId, typPath, code);
-    alert("Saved!");
-  } catch (e) {
-    console.error(e);
-    alert("Save failed: " + e.message);
-  }
-});
-
+    // Save functionality is handled in the editor module
   }
 
   async function loadUserInfoInEditor() {
@@ -220,6 +249,7 @@ saveBtn?.addEventListener("click", async () => {
   /* ---------- Navigation Helper ---------- */
   function navigateTo(appPath) {
     const fullPath = getFullPath(appPath);
+    console.log('Navigating to:', appPath, 'Full path:', fullPath);
     window.history.pushState({}, '', fullPath);
     handleRoute();
   }
@@ -236,21 +266,41 @@ saveBtn?.addEventListener("click", async () => {
       mountEditor(projectId);
     } else {
       // Default to dashboard
+      console.log('Unknown path, redirecting to dashboard');
       navigateTo('/dashboard');
     }
   }
 
   /* ---------- Browser Navigation ---------- */
-  window.addEventListener('popstate', () => {
+  window.addEventListener('popstate', (event) => {
+    console.log('Popstate event triggered');
     handleRoute();
   });
 
+  /* ---------- Global Navigation Functions (for dashboard) ---------- */
+  window.navigateToEditor = function(projectId = null) {
+    console.log('Global navigateToEditor called with:', projectId);
+    const path = projectId ? `/editor/${projectId}` : '/editor';
+    navigateTo(path);
+  };
+
+  window.navigateToDashboard = function() {
+    console.log('Global navigateToDashboard called');
+    navigateTo('/dashboard');
+  };
+
   /* ---------- Initial Auth Gate ---------- */
   getSession().then(({ data }) => {
+    console.log('Initial session check:', data.session ? 'logged in' : 'not logged in');
+    
     if (data.session) {
       // User is logged in, route them appropriately
-      if (isEditorPath()) {
+      const currentPath = getCurrentPath();
+      console.log('User logged in, current path:', currentPath);
+      
+      if (currentPath.startsWith('/editor')) {
         const projectId = getProjectIdFromPath();
+        console.log('Loading editor with project:', projectId);
         mountEditor(projectId);
       } else {
         // Default to dashboard
@@ -258,43 +308,55 @@ saveBtn?.addEventListener("click", async () => {
       }
     } else {
       // User not logged in, show login page
+      console.log('User not logged in, showing login');
       mountLogin(root);
     }
+  }).catch(error => {
+    console.error('Session check failed:', error);
+    mountLogin(root);
   });
 
   /* ---------- Auth State Changes ---------- */
-  onSession(user => {
-    if (user) {
-      // User just logged in, go to dashboard
+/* ---------- Auth State Changes ---------- */
+onSession(user => {
+  console.log('Auth state changed:', user ? 'logged in' : 'logged out');
+  if (user) {
+    // Only redirect to dashboard if user is NOT currently on editor page
+    const currentPath = getCurrentPath();
+    if (!currentPath.startsWith('/editor')) {
+      console.log('Not on editor page, going to dashboard');
       navigateTo('/dashboard');
     } else {
-      // User logged out, show login
-      mountLogin(root);
+      console.log('On editor page, staying put');
+      // User is on editor, don't redirect them
     }
-  });
-
-  /* ---------- Global Navigation Functions (for dashboard) ---------- */
-  window.navigateToEditor = function(projectId = null) {
-    const path = projectId ? `/editor/${projectId}` : '/editor';
-    navigateTo(path);
-  };
-
-  window.navigateToDashboard = function() {
-    navigateTo('/dashboard');
-  };
+  } else {
+    // User logged out, show login
+    mountLogin(root);
+  }
+});
 
   /* ---------- Initial Route Handling ---------- */
-  // Handle the initial load
+  // Handle the initial load when DOM is ready
   document.addEventListener('DOMContentLoaded', () => {
-    // If user visits the base path directly, redirect to app
-    if (window.location.pathname === BASE_PATH || window.location.pathname === BASE_PATH + '/') {
-      const currentPath = getCurrentPath();
-      if (currentPath === '/') {
- 
-        handleRoute();
-      }
+    console.log('DOM Content Loaded');
+    const fullPath = window.location.pathname;
+    console.log('Initial full path:', fullPath);
+    
+    // If we're at the base path, let the auth gate handle routing
+    if (fullPath === BASE_PATH || fullPath === BASE_PATH + '/') {
+      console.log('At base path, auth gate will handle routing');
+      return;
     }
+    
+    // If we have a specific path, handle it after auth check
+    console.log('Specific path detected, will route after auth check');
   });
+
+  /* ---------- Debug Info ---------- */
+  console.log('Router initialized with BASE_PATH:', BASE_PATH);
+  console.log('Current location:', window.location.pathname);
+  console.log('Parsed app path:', getCurrentPath());
 </script>
   </body>
 </html>

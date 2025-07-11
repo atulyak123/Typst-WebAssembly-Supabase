@@ -21,9 +21,7 @@ declare const $typst: TypstModule;
 const initialDoc: string = (window as any).__initialDoc ?? "";
 const preview = document.getElementById("preview")! as HTMLDivElement;
 
-/* -------------------------------------------------- */
-/*  UI Functions                                      */
-/* -------------------------------------------------- */
+
 const showPlaceholder = () => {
   preview.innerHTML = `
     <div class="placeholder">
@@ -76,6 +74,42 @@ function createMultiplePages(
   }
 
   preview.innerHTML = `<div class="pages-container">${html}</div>`;
+}
+
+/* -------------------------------------------------- */
+/*  Save Functions                                    */
+/* -------------------------------------------------- */
+function updateSaveStatus(status: 'saving' | 'saved' | 'error' | '') {
+  const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+  if (!saveBtn) return;
+
+  switch (status) {
+    case 'saving':
+      saveBtn.textContent = '💭'; // thinking/saving
+      saveBtn.disabled = true;
+      break;
+    case 'saved':
+      saveBtn.textContent = '✓'; // checkmark
+      saveBtn.disabled = false;
+      setTimeout(() => {
+        if (saveBtn.textContent === '✓') {
+          saveBtn.textContent = '💾';
+        }
+      }, 1500);
+      break;
+    case 'error':
+      saveBtn.textContent = '⚠️'; // warning
+      saveBtn.disabled = false;
+      setTimeout(() => {
+        if (saveBtn.textContent === '⚠️') {
+          saveBtn.textContent = '💾';
+        }
+      }, 3000);
+      break;
+    default:
+      saveBtn.textContent = '💾';
+      saveBtn.disabled = false;
+  }
 }
 
 /* -------------------------------------------------- */
@@ -162,14 +196,14 @@ function compileAndRender(src: string) {
       console.error(err);
     });
 }
-
+(window as any).compileAndRender = compileAndRender;
 /* -------------------------------------------------- */
 /*  Debounced Rendering                               */
 /* -------------------------------------------------- */
-let timer: number | undefined;
+let renderTimer: number | undefined;
 const debounceRender = (text: string) => {
-  clearTimeout(timer);
-  timer = window.setTimeout(() => {
+  clearTimeout(renderTimer);
+  renderTimer = window.setTimeout(() => {
     const clean = text.trim();
     if (clean.length) {
       compileAndRender(clean);
@@ -183,7 +217,10 @@ const debounceRender = (text: string) => {
 /*  Editor Setup                                      */
 /* -------------------------------------------------- */
 const updateListener = EditorView.updateListener.of(u => {
-  if (u.docChanged) debounceRender(u.state.doc.toString());
+  if (u.docChanged) {
+    const content = u.state.doc.toString();
+    debounceRender(content);
+  }
 });
 
 const view = new EditorView({
@@ -259,6 +296,41 @@ async function downloadPDF() {
 }
 
 exportBtn.addEventListener("click", downloadPDF);
+
+/* -------------------------------------------------- */
+/*  Manual Save Function                             */
+/* -------------------------------------------------- */
+async function manualSave() {
+  const projectId = (window as any).__currentProjectId;
+  const typPath = (window as any).__currentTypPath;
+  const content = view.state.doc.toString();
+
+  if (!projectId || !typPath) {
+    alert("No project to save");
+    return;
+  }
+
+  if (!content.trim()) {
+    alert("No content to save");
+    return;
+  }
+
+  try {
+    updateSaveStatus('saving');
+    const { saveProjectFile } = await import('../lib/projectService');
+    await saveProjectFile(projectId, typPath, content);
+    updateSaveStatus('saved');
+    alert("Saved!");
+  } catch (error) {
+    console.error('Manual save failed:', error);
+    updateSaveStatus('error');
+    alert("Save failed: " + (error as any).message);
+  }
+}
+
+/* -------------------------------------------------- */
+/*  Logout and Setup Functions                       */
+/* -------------------------------------------------- */
 async function setupLogoutFunctionality() {
   try {
     // Load user info
@@ -289,6 +361,12 @@ async function setupLogoutFunctionality() {
         }
       });
     }
+
+    // Setup manual save button (enhanced)
+    const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+    if (saveBtn) {
+      saveBtn.addEventListener("click", manualSave);
+    }
   } catch (error) {
     console.error("Failed to setup logout functionality:", error);
   }
@@ -296,3 +374,63 @@ async function setupLogoutFunctionality() {
 
 // Call this function after your editor is initialized
 setupLogoutFunctionality();
+
+// Function to compile using Typst directly
+async function directCompile(content: string) {
+  const preview = document.getElementById('preview');
+  if (!preview) return;
+  
+  try {
+    console.log('🎨 Direct compilation starting...');
+    preview.innerHTML = '<div class="placeholder">⌛ Compiling your document...</div>';
+    
+    const svg = await $typst.svg({ mainContent: content });
+    console.log('✅ Compilation successful');
+    
+    // Display the result
+    preview.innerHTML = `
+      <div class="pages-container">
+        <div class="page-wrapper">
+          <div class="svg-page">
+            ${svg}
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    console.error('❌ Compilation failed:', error);
+    preview.innerHTML = `<pre style="color:red; padding: 1rem;">${error}</pre>`;
+  }
+}
+
+// Check if we can compile
+async function compileWhenReady() {
+  const content = view.state.doc.toString();  
+  if (!content || content.trim().length === 0) {
+    console.log('📭 No content to compile');
+    return;
+  }
+  
+  const preview = document.getElementById('preview');
+  if (!preview) {
+    console.log('❌ Preview element not found');
+    return;
+  }
+  
+  // Check if preview already has substantial content (more than placeholder)
+  if (preview.innerHTML.length > 200 && !preview.innerHTML.includes('Start typing')) {
+    console.log('✅ Preview already has content');
+    return;
+  }
+  
+  // Check if $typst is ready
+  if (typeof $typst !== 'undefined' && $typst && typeof $typst.svg === 'function') {
+    console.log('✅ Typst is ready, compiling directly...');
+    await directCompile(content);
+  } else {
+    console.log('❌ Typst not ready');
+  }
+}
+
+// Start compilation
+compileWhenReady();

@@ -41,11 +41,12 @@
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden;
+  overflow: auto;
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui;
 }
+
 
 #toolbar {
   position: fixed;
@@ -311,7 +312,10 @@ html, body {
   background: var(--bg);
   color: var(--fg);
   font-family: system-ui;
-  overflow-y: visible;
+  height: 100vh;                  
+  overflow-y: auto;            
+  display: flex;
+  flex-direction: column;
 }
 
 /* Dashboard Header */
@@ -374,6 +378,7 @@ html, body {
 /* Main Content */
 .dashboard-main {
   padding: 2rem 0;
+    min-height: 100%;
 }
 
 .dashboard-container {

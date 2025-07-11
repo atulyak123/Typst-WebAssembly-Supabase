@@ -1,8 +1,8 @@
-// src/dashboard/dashboard.ts - Create this new file
 
 import { getCurrentUser } from '../auth/auth';
-import { deleteProject, fetchUserProjects } from '../lib/projectService';
-import { supabase } from '../lib/superbaseClient';
+import { deleteProject, fetchUserProjects, createNewProject, checkStorageAccess } from '../lib/projectService';
+
+let isCreatingProject = false; 
 
 export async function mountDashboard(root: HTMLElement) {
   root.innerHTML = `
@@ -43,6 +43,9 @@ export async function mountDashboard(root: HTMLElement) {
             <div class="section-header">
               <h2 class="section-title">My Projects</h2>
               <div class="section-actions">
+                <button id="refresh-btn" class="refresh-btn" title="Refresh">
+                  <span>🔄</span>
+                </button>
                 <button id="view-toggle" class="view-toggle" title="Toggle view">
                   <span id="view-icon">⊞</span>
                 </button>
@@ -80,6 +83,13 @@ export async function mountDashboard(root: HTMLElement) {
 
 async function initializeDashboard() {
   try {
+    // Check storage access first
+    const storageOK = await checkStorageAccess();
+    if (!storageOK) {
+      console.error('Storage access failed');
+      return;
+    }
+
     // Load user info
     const user = await getCurrentUser();
     if (user) {
@@ -93,7 +103,7 @@ async function initializeDashboard() {
     // Setup event listeners
     setupDashboardEvents();
     
-    // Load projects (we'll implement this next)
+    // Load projects
     await loadProjects();
     
   } catch (error) {
@@ -102,23 +112,25 @@ async function initializeDashboard() {
 }
 
 function setupDashboardEvents() {
-  // Create empty document
+  // Create empty document - FIXED: Prevent duplicate creation
   const createEmptyBtn = document.getElementById('create-empty');
-  createEmptyBtn?.addEventListener('click', () => {
-    createNewDocument();
+  createEmptyBtn?.addEventListener('click', async () => {
+    if (isCreatingProject) {
+      console.log('Project creation already in progress');
+      return;
+    }
+    await createNewDocument();
   });
 
-  // Create from template (placeholder for now)
-  const createTemplateBtn = document.getElementById('create-template');
-  createTemplateBtn?.addEventListener('click', () => {
-    alert('Templates coming soon! For now, use "Empty Document"');
+  // Refresh projects
+  const refreshBtn = document.getElementById('refresh-btn');
+  refreshBtn?.addEventListener('click', async () => {
+    await loadProjects();
   });
 
   // Logout functionality
   const logoutBtn = document.getElementById("logout-btn");
-logoutBtn?.addEventListener(
-  "click",
-  async () => {
+  logoutBtn?.addEventListener("click", async () => {
     if (!confirm("Are you sure you want to sign out?")) return;
     try {
       const { signOut } = await import("../auth/auth");
@@ -126,10 +138,7 @@ logoutBtn?.addEventListener(
     } catch (err) {
       console.error("Logout failed:", err);
     }
-  },
-  { once: true }         
-);
-
+  });
 
   // View toggle (grid/list)
   const viewToggle = document.getElementById('view-toggle');
@@ -150,49 +159,72 @@ logoutBtn?.addEventListener(
   });
 }
 
-
 async function createNewDocument() {
-  const user = await getCurrentUser();
-  if (!user) {
-    alert('You must be logged in to create a project');
+  if (isCreatingProject) {
+    console.log('Already creating a project, ignoring duplicate request');
     return;
   }
 
-  const title = 'Untitled Document';
-const projectId = crypto.randomUUID();         
-const typPath   = `${user.id}/${projectId}/main.typ`;
+  try {
+    isCreatingProject = true;
+    
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('You must be logged in to create a project');
+    }
+    const title = prompt("What would you like to name your document?", "My New Document");
+    if (!title || !title.trim()) {
+      console.log('User cancelled or entered empty title');
+      return;
+    }
 
-
-  const { data, error } = await supabase.from('projects')
-  .insert([{ id: projectId, user_id: user.id, title, typ_path: typPath }]).select().single();
-
-  if (error) {
-    console.error('Failed to create new project:', error);
-    alert('Failed to create new project');
-    return;
+    console.log('Creating new document for user:', user.id, 'with title:', title.trim());
+    
+    // Use the user-provided title instead of 'Untitled Document'
+    const project = await createNewProject(user.id, title.trim());
+    
+    console.log('Project created successfully:', project);
+    
+    // Navigate to editor
+    navigateToEditor(project.id);
+    
+  } catch (error) {
+    console.error('Failed to create new document:', error);
+    alert(`Failed to create new document: ${(error as Error).message}`);
+  } finally {
+    isCreatingProject = false;
   }
-
-  // Redirect to editor with new project ID
-navigateToEditor(projectId);
 }
 
 function navigateToEditor(projectId?: string) {
-  // Update URL and trigger route handler
-  const url = projectId ? `/editor/${projectId}` : '/editor';
-  window.history.pushState({ projectId }, '', url);
-  
-  // Trigger the route handler from index.html
-  window.dispatchEvent(new PopStateEvent('popstate'));
+  // Use the global navigation function from index.html
+  if (typeof (window as any).navigateToEditor === 'function') {
+    (window as any).navigateToEditor(projectId);
+  } else {
+    // Fallback method
+    const path = projectId ? `/editor/${projectId}` : '/editor';
+    const fullPath = projectId ? `/Typst-WebAssembly/editor/${projectId}` : '/Typst-WebAssembly/editor';
+    window.history.pushState({}, '', fullPath);
+    window.location.reload();
+  }
 }
-
-
 
 async function loadProjects() {
   const projectsGrid = document.getElementById('projects-grid');
   if (!projectsGrid) return;
 
   try {
+    // Show loading state
+    projectsGrid.innerHTML = `
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>Loading your projects...</p>
+      </div>
+    `;
+
+    console.log('Loading projects...');
     const projects = await fetchUserProjects();
+    console.log('Projects loaded:', projects);
 
     if (!projects || projects.length === 0) {
       showEmptyState(projectsGrid);
@@ -201,9 +233,10 @@ async function loadProjects() {
       const formattedProjects = projects.map((p: any) => ({
         id: p.id,
         title: p.title,
-        description: `Last saved file: ${p.typ_path}`,
+        description: `Last modified: ${new Date(p.updated_at).toLocaleDateString()}`,
         lastModified: new Date(p.updated_at),
-        isOwner: true, // all are user-owned for now
+        typPath: p.typ_path,
+        isOwner: true,
       }));
 
       renderProjects(projectsGrid, formattedProjects);
@@ -215,7 +248,7 @@ async function loadProjects() {
 }
 
 function renderProjects(container: HTMLElement, projects: any[]) {
-  container.className = 'projects-grid grid-view'; // Start with grid view
+  container.className = 'projects-grid grid-view';
   
   const projectsHTML = projects.map(project => `
     <div class="project-card" data-project-id="${project.id}">
@@ -233,53 +266,53 @@ function renderProjects(container: HTMLElement, projects: any[]) {
         </div>
       </div>
       <div class="project-actions">
-    <button class="project-menu-btn" data-project-id="${project.id}">⋯</button>
-      <button class="delete-btn" title="Delete" data-project-id="${project.id}" data-typ-path="${project.typ_path}">
-        🗑
-     </button>
-    </div>
+        <button class="project-menu-btn" data-project-id="${project.id}">⋯</button>
+        <button class="delete-btn" title="Delete" data-project-id="${project.id}" data-typ-path="${project.typPath}">
+          🗑
+        </button>
+      </div>
     </div>
   `).join('');
 
   container.innerHTML = projectsHTML;
 
-  // Add click handlers
+  // Add click handlers for opening projects
   container.querySelectorAll('.project-card').forEach((card) => {
     card.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).classList.contains('project-menu-btn')) {
-        return; // Don't open project if clicking menu button
+      // Don't open if clicking on action buttons
+      if ((e.target as HTMLElement).closest('.project-actions')) {
+        return;
       }
+      
       const projectId = card.getAttribute('data-project-id');
       if (projectId) {
+        console.log('Opening project:', projectId);
         navigateToEditor(projectId);
       }
     });
   });
-  /* open on card click (already there) … */
 
-/* 🗑 delete click */
-container.querySelectorAll<HTMLButtonElement>('.delete-btn')
-  .forEach(btn => btn.addEventListener('click', async e => {
-    e.stopPropagation();                       // prevent card click
-    const id      = btn.dataset.projectId!;
-    const typPath = btn.dataset.typPath!;
+  // Add delete handlers
+  container.querySelectorAll<HTMLButtonElement>('.delete-btn')
+    .forEach(btn => btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      
+      const projectId = btn.dataset.projectId!;
+      const typPath = btn.dataset.typPath!;
 
-    if (!confirm("Delete this project forever?")) return;
+      if (!confirm("Delete this project forever? This action cannot be undone.")) return;
 
-    try {
-      await deleteProject(id, typPath);
-      // remove card from DOM immediately
-      btn.closest('.project-card')?.remove();
-      // If none left, rebuild empty state
-      if (!container.querySelector('.project-card')) {
-        showEmptyState(container);
+      try {
+        await deleteProject(projectId, typPath);
+        btn.closest('.project-card')?.remove();
+        if (!container.querySelector('.project-card')) {
+          showEmptyState(container);
+        }
+      } catch (err) {
+        console.error('Delete failed:', err);
+        alert(`Delete failed: ${(err as Error).message}`);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Delete failed: " + (err as any).message);
-    }
-  }));
-
+    }));
 }
 
 function showEmptyState(container: HTMLElement) {
@@ -294,7 +327,6 @@ function showEmptyState(container: HTMLElement) {
     </div>
   `;
   
-  // Add event listener to the button
   const ctaBtn = container.querySelector('#empty-cta-btn');
   ctaBtn?.addEventListener('click', () => {
     createNewDocument();
@@ -310,7 +342,6 @@ function showErrorState(container: HTMLElement) {
     </div>
   `;
   
-  // Add event listener to the retry button
   const retryBtn = container.querySelector('#retry-btn');
   retryBtn?.addEventListener('click', () => {
     loadProjects();
