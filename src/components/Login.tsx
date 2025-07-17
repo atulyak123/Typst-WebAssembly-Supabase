@@ -1,11 +1,13 @@
 "use client"
 import { type FormEvent, useRef, useState, useEffect } from 'react';
 import { Input } from './ui/input';
+import { useAuth } from '@/context/auth-context';
 
 type MessageType = 'idle' | 'success' | 'error' | 'info';
 type LoadingState = 'idle' | 'busy' | 'success' | 'error';
 
 export default function Login() {
+  const { signInWithMagicLink } = useAuth();
 
   // State management
   const [email, setEmail] = useState('');
@@ -27,6 +29,7 @@ export default function Login() {
       }, 8000);
     }
   };
+
   // Handle form submission
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -46,6 +49,27 @@ export default function Login() {
       return;
     }
 
+    // Start loading
+    setStatus('busy');
+    setMessage('');
+    setMessageType('idle');
+
+    try {
+      const { error } = await signInWithMagicLink(emailValue);
+      
+      if (error) {
+        setStatus('error');
+        showMessage(error.message || 'Failed to send magic link. Please try again.', 'error');
+      } else {
+        setStatus('success');
+        showMessage('Magic link sent! Check your email and click the link to sign in.', 'success');
+        // Don't clear the success message automatically
+      }
+    } catch (error) {
+      setStatus('error');
+      showMessage('An unexpected error occurred. Please try again.', 'error');
+      console.error('Magic link error:', error);
+    }
   }
 
   // Handle input changes
@@ -54,13 +78,13 @@ export default function Login() {
     setEmail(value);
     
     // Clear previous messages when user starts typing
-    if (message && messageType === 'error') {
+    if (message && (messageType === 'error' || messageType === 'success')) {
       setMessage('');
       setMessageType('idle');
     }
     
     // Reset status when user starts typing
-    if (status === 'error') {
+    if (status === 'error' || status === 'success') {
       setStatus('idle');
     }
     
@@ -107,6 +131,18 @@ export default function Login() {
         return `${baseClasses} text-indigo-700 bg-indigo-50 border-indigo-200 dark:text-indigo-400 dark:bg-indigo-900/20 dark:border-indigo-800`;
       default:
         return 'hidden';
+    }
+  };
+
+  // Get button text based on status
+  const getButtonText = () => {
+    switch (status) {
+      case 'busy':
+        return 'Sending Magic Link...';
+      case 'success':
+        return 'Magic Link Sent!';
+      default:
+        return 'Send Magic Link';
     }
   };
 
@@ -182,11 +218,15 @@ export default function Login() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={status === 'busy'}
-              className="w-full py-4 px-6 bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/40 active:scale-100 active:translate-y-0 disabled:opacity-80 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center justify-center min-h-[52px] relative overflow-hidden"
+              disabled={status === 'busy' || status === 'success'}
+              className={`w-full py-4 px-6 font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] hover:-translate-y-0.5 hover:shadow-xl active:scale-100 active:translate-y-0 disabled:opacity-80 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center justify-center min-h-[52px] relative overflow-hidden ${
+                status === 'success' 
+                  ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:shadow-emerald-500/40' 
+                  : 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:shadow-indigo-500/40'
+              }`}
             >
               <span className={`transition-opacity duration-300 ${status === 'busy' ? 'opacity-0' : 'opacity-100'}`}>
-                Send Magic Link
+                {getButtonText()}
               </span>
               {status === 'busy' && (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -215,6 +255,10 @@ export default function Login() {
               <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
                 <span className="text-base w-6 text-center">⚡</span>
                 <span className="leading-relaxed">Real-time collaborative document editing</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+                <span className="text-base w-6 text-center">🔗</span>
+                <span className="leading-relaxed">Passwordless login with magic links</span>
               </div>
             </div>
           </div>

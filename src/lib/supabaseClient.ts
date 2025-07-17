@@ -45,19 +45,19 @@ export const getServerClient = () => {
   try {
     // Server-side variables should not have NEXT_PUBLIC_ prefix
     const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl) {
       console.warn("SUPABASE_URL is not defined")
       throw new Error("SUPABASE_URL is required")
     }
 
-    if (!supabaseServiceKey) {
-      console.warn("SUPABASE_SERVICE_ROLE_KEY is not defined")
-      throw new Error("SUPABASE_SERVICE_ROLE_KEY is required")
+    if (!supabaseAnonKey) {
+      console.warn("SUPABASE_ANON_KEY is not defined")
+      throw new Error("SUPABASE_ANON_KEY is required")
     }
 
-    return createClient<any>(supabaseUrl, supabaseServiceKey)
+    return createClient<any>(supabaseUrl, supabaseAnonKey)
   } catch (error) {
     console.error("Error creating Supabase server client:", error)
     throw error

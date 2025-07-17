@@ -11,8 +11,7 @@ type AuthContextType = {
   user: User | null
   session: Session | null
   isLoading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>
+  signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
 }
 
@@ -61,10 +60,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
+      } = supabase.auth.onAuthStateChange((event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
         setIsLoading(false)
+        
+        // Redirect to dashboard when user signs in
+        if (event === 'SIGNED_IN' && session?.user) {
+          router.push("/dashboard")
+        }
+        
+        // Redirect to login when user signs out
+        if (event === 'SIGNED_OUT') {
+          router.push("/login")
+        }
       })
 
       return () => {
@@ -74,58 +83,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error setting up auth state change listener:", error)
       setIsLoading(false)
     }
-  }, [])
+  }, [router])
 
-  const signIn = async (email: string, password: string) => {
+  const signInWithMagicLink = async (email: string) => {
     try {
       const supabase = getSupabase()
       if (!supabase) {
         return { error: new Error("Supabase client initialization failed") }
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (!error) {
-        router.push("/dashboard")
-      }
-      return { error }
-    } catch (error) {
-      console.error("Sign in error:", error)
-      return { error: error as Error }
-    }
-  }
-
-  const signUp = async (email: string, password: string, name: string) => {
-    try {
-      const supabase = getSupabase()
-      if (!supabase) {
-        return { error: new Error("Supabase client initialization failed") }
+      // Validate email domain
+      if (!email.endsWith('@infocusp.com')) {
+        return { error: new Error("Access restricted to Infocusp employees only") }
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email,
-        password,
         options: {
-          data: {
-            display_name: name,
-          },
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       })
 
-      if (!error && data.user) {
-        try {
-          await supabase.from("user_profiles").insert({
-            id: data.user.id,
-            display_name: name,
-          })
-        } catch (profileError) {
-          console.error("Error creating user profile:", profileError)
-        }
-        router.push("/dashboard")
-      }
-
       return { error }
     } catch (error) {
-      console.error("Sign up error:", error)
+      console.error("Magic link sign in error:", error)
       return { error: error as Error }
     }
   }
@@ -136,14 +117,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (supabase) {
         await supabase.auth.signOut()
       }
-      router.push("/login")
+      // No need to manually redirect here - the auth state change listener will handle it
     } catch (error) {
       console.error("Sign out error:", error)
     }
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, signInWithMagicLink, signOut }}>
       {children}
     </AuthContext.Provider>
   )
