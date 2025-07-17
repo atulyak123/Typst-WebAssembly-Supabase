@@ -1,0 +1,386 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+
+/* Your original CSS variables and styling */
+:root {
+  --bg:          #ffffff;
+  --fg:          #1a1a1a;
+  --pane-bg:     #f5f5f5;
+  --placeholder: #888;
+  --divider:     #d0d0d0;
+  /* mid-grey backdrop around the "paper" */
+  --preview-bg:  #cfd0d2;
+  --paper-w:     210mm;
+
+  /* layout */
+  --pane-gap:  1rem;   /* gap between panes */
+  --radius:    .75rem; /* rounded-corner radius */
+}
+
+/* automatic dark scheme */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:          #111;
+    --fg:          #eaeaea;
+    --pane-bg:     #1e1e1e;
+    --placeholder: #aaa;
+    --divider:     #303030;
+    --preview-bg:  #181818;
+  }
+}
+
+/* manual dark toggle (data-theme set by JS) */
+:root[data-theme="dark"] {
+  --bg:          #111;
+  --fg:          #eaeaea;
+  --pane-bg:     #1e1e1e;
+  --placeholder: #aaa;
+  --divider:     #303030;
+  --preview-bg:  #181818;
+}
+
+/* ───────────────────────────────────────────────
+   LAYOUT
+   ─────────────────────────────────────────────── */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui;
+}
+
+#toolbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+  padding: 0 1rem;
+  background: var(--pane-bg);
+  border-bottom: 1px solid var(--divider);
+  z-index: 1000;
+}
+
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+/* App title */
+.app-title {
+  font-weight: 600;
+  color: var(--fg);
+  font-size: 1rem;
+}
+
+/* User email display */
+.user-email {
+  font-size: 0.85rem;
+  color: var(--placeholder);
+  background: var(--bg);
+  padding: 0.25rem 0.5rem;
+  border-radius: calc(var(--radius) / 2);
+  border: 1px solid var(--divider);
+}
+
+#toolbar button {
+  padding: .35rem .6rem;
+  border: 1px solid var(--divider);
+  background: var(--pane-bg);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: .9rem;
+  border-radius: calc(var(--radius) / 2);
+  transition: all 0.2s ease;
+}
+
+#toolbar button:hover:not(:disabled) {
+  background: var(--bg);
+  transform: translateY(-1px);
+}
+
+#toolbar button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+.logout-btn {
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.logout-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: #ef4444 !important;
+  color: #dc2626 !important;
+}
+
+#app {
+  display: flex;
+  height: calc(100vh - 48px);
+  margin-top: 48px;
+  overflow: hidden;
+  gap: var(--pane-gap);
+  background: var(--pane-bg);
+  padding: var(--pane-gap);
+  box-sizing: border-box;
+}
+
+/* shared pane style */
+#editor,
+#preview {
+  flex: 1 1 50%;
+  height: 100%;
+  border-radius: var(--radius);
+  box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+
+/* editor pane */
+#editor {
+  background: var(--pane-bg);
+  overflow: auto;
+}
+
+/* CodeMirror tweaks */
+#editor .cm-editor { 
+  height: 100%;
+  background: var(--pane-bg);
+}
+#editor .cm-content { 
+  padding-left: .75rem;
+  background: var(--pane-bg);
+  color: var(--fg);
+}
+#editor .cm-focused {
+  outline: none;
+}
+
+/* ===== PREVIEW PANE - UNIFIED STYLES ===== */
+#preview {
+  background: var(--preview-bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Default placeholder (when no content) */
+#preview .placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--placeholder);
+  font-size: 1.1rem;
+  text-align: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+#preview .placeholder::before {
+  content: "📄";
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+/* Pages container */
+.pages-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
+  align-items: center;
+  width: 100%;
+  min-height: 100%;
+}
+
+/* Individual page wrapper */
+.page-wrapper {
+  position: relative;
+  max-width: var(--paper-w);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Page container with shadow */
+.svg-page {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  padding: 1rem;
+}
+
+.svg-page:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.svg-page svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: white;
+}
+
+/* Page info/number */
+.page-info {
+  margin-top: 1rem;
+  color: var(--placeholder);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ===== SINGLE PAGE FALLBACK ===== */
+/* When there's only one page or original SVG */
+#preview > svg {
+  background: #fff;
+  width: 100%;
+  max-width: var(--paper-w);
+  height: auto;
+  box-shadow: 0 0 10px rgba(0,0,0,.15);
+  margin: 2rem auto;
+  border-radius: 8px;
+}
+
+/* ===== DARK MODE ADJUSTMENTS ===== */
+:root[data-theme="dark"] .svg-page {
+  background: #1e1e1e;
+  border: 1px solid #333;
+}
+
+:root[data-theme="dark"] .svg-page svg {
+  background: #1e1e1e;
+}
+
+:root[data-theme="dark"] #preview > svg {
+  background: #1e1e1e;
+  border: 1px solid #333;
+}
+
+/* Dark mode SVG text */
+:root[data-theme="dark"] #preview svg text,
+:root[data-theme="dark"] #preview svg tspan {
+  fill: var(--fg) !important;
+}
+
+/* Hide link hit-boxes */
+#preview svg a rect,
+:root[data-theme="dark"] #preview svg line {
+  fill: none !important;
+  stroke: none !important;
+}
+
+/* CodeMirror dark theme */
+:root[data-theme="dark"] #editor .cm-editor {
+  background: var(--pane-bg);
+}
+
+:root[data-theme="dark"] #editor .cm-content {
+  background: var(--pane-bg);
+  color: var(--fg);
+}
+
+:root[data-theme="dark"] #editor .cm-gutters {
+  background: var(--bg);
+  color: var(--placeholder);
+  border-right: 1px solid var(--divider);
+}
+
+:root[data-theme="dark"] #editor .cm-activeLineGutter {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] #editor .cm-activeLine {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme="dark"] #editor .cm-selectionBackground {
+  background: rgba(102, 126, 234, 0.3);
+}
+
+/* Back button */
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--pane-bg);
+  border: 1px solid var(--divider);
+  border-radius: calc(var(--radius) / 2);
+  color: var(--fg);
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: var(--bg);
+  transform: translateY(-1px);
+}
+
+.project-title {
+  font-weight: 600;
+  color: var(--fg);
+  margin-left: 1rem;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .pages-container {
+    padding: 1rem 0.5rem;
+    gap: 1rem;
+  }
+  
+  .page-wrapper {
+    max-width: 100%;
+  }
+  
+  .svg-page {
+    border-radius: 4px;
+  }
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .pages-container {
+    background: white;
+    padding: 0;
+    gap: 0;
+  }
+
+  .svg-page {
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    page-break-after: always;
+  }
+  
+  .svg-page:last-child {
+    page-break-after: avoid;
+  }
+  
+  .page-info {
+    display: none;
+  }
+}

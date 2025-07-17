@@ -1,86 +1,36 @@
-# Typst Playground
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-A lightweight Typst playground in the browser — powered by Vite, CodeMirror, and WASM.
+## Getting Started
 
-## ✨ Features
-
-- 🔐 **Login via Magic Link using Supabase**
-- 👤 **Authentication-protected Dashboard**
-- ✍️ **Live Typst Editor** with instant SVG rendering
-- 🧭 **React Router** based multi-page navigation (Login, Dashboard, Editor)
-- 💨 Vite-powered fast dev server
-- 🌓 Light/dark responsive 2-pane layout
-- ⚡ Powered by WASM (`@myriaddreamin/typst-all-in-one.ts`)
-
-
-
-## 🚀 Getting Started
-
-###  Clone or unzip the project
+First, run the development server:
 
 ```bash
-cd typst-playground
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-### Install dependencies
- ```bash 
- pnpm install
- ```
- 
- ### Start the dev server
- ``` bash
- pnpm dev
- ```
-### Create .env File
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-Add your Supabase credentials:
-```bash
-VITE_SUPABASE_URL=your-project-url
-VITE_SUPABASE_ANON_KEY=your-anon-key
-```
- 
- ### Project Structure
- ```bash
-Typst-WebAssembly-Supabase/
-├── public/                      # Static assets (favicon, etc.)
-├── src/
-│   ├── auth/
-│   │   ├── auth.ts              # Auth context logic
-│   │   └── login.ts             # Magic link login UI logic
-│   ├── dashboard/
-│   │   └── dashboard.ts         # Protected dashboard page
-│   ├── editor/
-│   │   └── editor.ts            # Typst editor logic (WIP or live)
-│   ├── lib/
-│   │   ├── supabaseClient.ts    # Supabase client configuration
-│   │   └── projectService.ts    # Utilities or API-related logic
-│   ├── main.ts                  # Entry point (mounts app)
-│   ├── style.css                # Tailwind/global styles
-│   ├── typst.lang.ts            # Typst language configuration
-│   ├── global.d.ts              # Global type declarations
-│   └── vite-env.d.ts            # Vite-specific typings
-├── .env                         # Supabase environment variables
-├── .gitignore
-├── index.html                   # HTML entrypoint
-├── package.json
-├── pnpm-lock.yaml
-├── tsconfig.json
-├── vite.config.js
-└── README.md
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Learn More
 
+To learn more about Next.js, take a look at the following resources:
 
-### ⚙️ Built With
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
- - Vite
- - CodeMirror 6
- - @myriaddreamin/typst-all-in-one.ts
- - TypeScript
- - Supabase
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Deploy on Vercel
 
-### Tip
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-The Typst WebAssembly bundle loads from the JSDelivr CDN. No extra setup is needed.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
