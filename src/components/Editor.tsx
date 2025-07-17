@@ -6,6 +6,8 @@ import { EditorState } from '@codemirror/state';
 import { basicSetup } from 'codemirror';
 import { typstSyntax } from '../hooks/typystSyntax';
 import { useTypst } from '@/hooks/useTypyst';
+import { useRouter } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
 
 type Theme = 'light' | 'dark';
 
@@ -17,11 +19,14 @@ interface PageAnalysis {
 
 interface EditorProps {
   projectId: string;
+  user: User;
+  signOut: () => Promise<void>;
   initialDoc?: string;
 }
 
-export default function TypstEditor({ projectId }: EditorProps) {
+export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
   const { $typst, isReady: isTypstReady, error: typstError } = useTypst();
+  const router = useRouter();
 
   const [documentContent, setDocumentContent] = useState('');
   const [theme, setTheme] = useState<Theme>('light');
@@ -34,6 +39,39 @@ export default function TypstEditor({ projectId }: EditorProps) {
   const editorViewRef = useRef<EditorView | null>(null);
   const compileTimerRef = useRef<number | undefined>(undefined);
   const hasCompiledOnceRef = useRef(false);
+
+  // Helper function to get user name from email
+  const getUserName = () => {
+    if (user.user_metadata?.display_name) {
+      return user.user_metadata.display_name;
+    }
+    
+    const emailName = user.email?.split('@')[0];
+    if (emailName) {
+      return emailName
+        .split('.')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+    }
+    
+    return 'User';
+  };
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    if (confirm('Are you sure you want to sign out? Make sure your work is saved.')) {
+      try {
+        await signOut();
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
+    }
+  };
+
+  // Navigate back to dashboard
+  const handleBackToDashboard = () => {
+    router.push('/dashboard');
+  };
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('typst-theme') as Theme | null;
@@ -278,11 +316,69 @@ export default function TypstEditor({ projectId }: EditorProps) {
     <>
       <div id="toolbar">
         <div className="toolbar-left">
+          <button 
+            onClick={handleBackToDashboard}
+            title="Back to Dashboard"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer',
+              marginRight: '1rem',
+              fontSize: '1.2rem'
+            }}
+          >
+            ← 
+          </button>
           <span className="app-title">📄 Typst Editor</span>
           {projectId && <span className="project-title">Project: {projectId}</span>}
         </div>
         <div className="toolbar-right">
-          <span className="user-email">User</span>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '1rem',
+            marginRight: '1rem'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem'
+            }}>
+              <span style={{ 
+                fontSize: '0.875rem',
+                color: '#64748b'
+              }}>
+                {getUserName()}
+              </span>
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: '#2563eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '0.75rem',
+                fontWeight: '500'
+              }}>
+                {getUserName().charAt(0).toUpperCase()}
+              </div>
+            </div>
+            <button 
+              onClick={handleSignOut}
+              title="Sign Out"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                color: '#ef4444'
+              }}
+            >
+              🚪
+            </button>
+          </div>
           <button onClick={toggleTheme} title="Toggle theme">
             {theme === 'dark' ? '☀' : '🌙'}
           </button>
