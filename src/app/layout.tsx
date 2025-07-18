@@ -5,11 +5,18 @@ export const metadata = {
 import { AuthProvider } from "@/context/auth-context";
 import "./globals.css";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <head />
-      <body>   <AuthProvider>{children}</AuthProvider></body>
+      <body>
+        {" "}
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

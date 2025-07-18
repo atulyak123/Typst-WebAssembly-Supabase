@@ -38,55 +38,57 @@ export async function fetchUserProjects(): Promise<Project[]> {
 export async function loadProjectFile(path: string): Promise<string> {
   try {
     console.log(`Loading file from path: ${path}`);
-    
+
     const supabase = getBrowserClient();
-    const { data, error } = await supabase
-      .storage
-      .from('user-projects')
+    const { data, error } = await supabase.storage
+      .from("user-projects")
       .download(path);
 
     if (error) {
       console.log(`File load error for ${path}:`, error);
-      
+
       // If file doesn't exist, return default content
-      if (error.message?.includes('not found')) {
+      if (error.message?.includes("not found")) {
         console.log(`File ${path} not found, returning default content`);
         return DEFAULT_CONTENT;
       }
-      
+
       throw new Error(`Storage error: ${error.message}`);
     }
 
     const content = await data.text();
     console.log(`Successfully loaded file ${path}, length: ${content.length}`);
     return content;
-    
   } catch (error) {
     console.error(`Error loading project file ${path}:`, error);
     return DEFAULT_CONTENT;
   }
 }
 
-
 /* ---------- Create new project with initial file ---------- */
-export async function createNewProject(userId: string, title: string = 'Untitled Document'): Promise<Project> {
+export async function createNewProject(
+  userId: string,
+  title: string = "Untitled Document",
+): Promise<Project> {
   try {
     const projectId = crypto.randomUUID();
     const typPath = `${userId}/${projectId}/main.typ`;
-    
+
     console.log(`Creating new project: ${projectId}`);
-    
+
     const supabase = getBrowserClient();
-    
+
     // 1. Create database entry first
     const { data, error: dbError } = await supabase
-      .from('projects')
-      .insert([{ 
-        id: projectId, 
-        user_id: userId, 
-        title, 
-        typ_path: typPath 
-      }])
+      .from("projects")
+      .insert([
+        {
+          id: projectId,
+          user_id: userId,
+          title,
+          typ_path: typPath,
+        },
+      ])
       .select()
       .single();
 
@@ -95,24 +97,22 @@ export async function createNewProject(userId: string, title: string = 'Untitled
     }
 
     // 2. Create initial file with default content
-    const { error: fileError } = await supabase
-      .storage
-      .from('user-projects')
-      .upload(typPath, new Blob([DEFAULT_CONTENT], { type: 'text/plain' }), {
-        contentType: 'text/plain'
+    const { error: fileError } = await supabase.storage
+      .from("user-projects")
+      .upload(typPath, new Blob([DEFAULT_CONTENT], { type: "text/plain" }), {
+        contentType: "text/plain",
       });
 
     if (fileError) {
       // Clean up database entry if file creation fails
-      await supabase.from('projects').delete().eq('id', projectId);
+      await supabase.from("projects").delete().eq("id", projectId);
       throw new Error(`File creation failed: ${fileError.message}`);
     }
 
     console.log(`Successfully created project ${projectId} with initial file`);
     return data;
-    
   } catch (error) {
-    console.error('Error creating new project:', error);
+    console.error("Error creating new project:", error);
     throw error;
   }
 }
@@ -124,16 +124,15 @@ export async function saveProjectFile(
 ): Promise<void> {
   try {
     console.log(`Saving file to ${typPath}, length: ${code.length}`);
-    
+
     const supabase = getBrowserClient();
-    
+
     // Upload file to storage
-    const { error: uploadError } = await supabase
-      .storage
-      .from('user-projects')
-      .upload(typPath, new Blob([code], { type: 'text/plain' }), { 
+    const { error: uploadError } = await supabase.storage
+      .from("user-projects")
+      .upload(typPath, new Blob([code], { type: "text/plain" }), {
         upsert: true,
-        contentType: 'text/plain'
+        contentType: "text/plain",
       });
 
     if (uploadError) {
@@ -142,18 +141,17 @@ export async function saveProjectFile(
 
     // Update database timestamp
     const { error: updateError } = await supabase
-      .from('projects')
-      .update({ 
+      .from("projects")
+      .update({
         updated_at: new Date().toISOString(),
       })
-      .eq('id', projectId);
+      .eq("id", projectId);
 
     if (updateError) {
       console.warn(`Database update failed: ${updateError.message}`);
     }
 
     console.log(`Successfully saved project ${projectId}`);
-    
   } catch (error) {
     console.error(`Error saving project file:`, error);
     throw error;
@@ -161,15 +159,17 @@ export async function saveProjectFile(
 }
 
 /* ---------- Delete project ---------- */
-export async function deleteProject(projectId: string, typPath: string): Promise<void> {
+export async function deleteProject(
+  projectId: string,
+  typPath: string,
+): Promise<void> {
   try {
     console.log(`Deleting project ${projectId}`);
-    
+
     const supabase = getBrowserClient();
-    
+
     // Delete file from storage first
-    const { error: storageError } = await supabase
-      .storage
+    const { error: storageError } = await supabase.storage
       .from("user-projects")
       .remove([typPath]);
 
@@ -188,9 +188,8 @@ export async function deleteProject(projectId: string, typPath: string): Promise
     }
 
     console.log(`Successfully deleted project ${projectId}`);
-    
   } catch (error) {
-    console.error('Error deleting project:', error);
+    console.error("Error deleting project:", error);
     throw error;
   }
 }
@@ -198,74 +197,78 @@ export async function deleteProject(projectId: string, typPath: string): Promise
 /* ---------- Check storage access ---------- */
 export async function checkStorageAccess(): Promise<boolean> {
   try {
-    console.log('🔍 Checking storage access...');
-    
+    console.log("🔍 Checking storage access...");
+
     const supabase = getBrowserClient();
     const { data: user } = await supabase.auth.getUser();
-    
+
     if (!user.user) {
-      console.log('❌ Not authenticated');
+      console.log("❌ Not authenticated");
       return false;
     }
-    
+
     // Test if we can access files in the user-projects bucket
     const testPath = `${user.user.id}/test-${Date.now()}/connectivity-test.txt`;
-    const testContent = 'Storage connectivity test';
-    
-    console.log('Testing file upload to:', testPath);
-    
+    const testContent = "Storage connectivity test";
+
+    console.log("Testing file upload to:", testPath);
+
     // Try to upload a test file
     const { error: uploadError } = await supabase.storage
-      .from('user-projects')
-      .upload(testPath, new Blob([testContent], { type: 'text/plain' }));
-    
+      .from("user-projects")
+      .upload(testPath, new Blob([testContent], { type: "text/plain" }));
+
     if (uploadError) {
-      console.log('❌ Upload test failed:', uploadError.message);
-      
+      console.log("❌ Upload test failed:", uploadError.message);
+
       // If upload fails, check if it's a bucket existence issue
-      if (uploadError.message.includes('Bucket not found')) {
-        console.log('❌ user-projects bucket does not exist');
+      if (uploadError.message.includes("Bucket not found")) {
+        console.log("❌ user-projects bucket does not exist");
         return false;
       }
-      
+
       // If it's a permission issue, that's expected - bucket exists but policies need setup
-      if (uploadError.message.includes('permission') || uploadError.message.includes('policy')) {
-        console.log('⚠️  Bucket exists but needs policies. Will continue anyway.');
+      if (
+        uploadError.message.includes("permission") ||
+        uploadError.message.includes("policy")
+      ) {
+        console.log(
+          "⚠️  Bucket exists but needs policies. Will continue anyway.",
+        );
         return true; // Bucket exists, policies just need setup
       }
-      
+
       return false;
     }
-    
-    console.log('✅ Upload test successful');
-    
+
+    console.log("✅ Upload test successful");
+
     // Try to download the test file
     const { error: downloadError } = await supabase.storage
-      .from('user-projects')
+      .from("user-projects")
       .download(testPath);
-    
+
     if (!downloadError) {
-      console.log('✅ Download test successful');
+      console.log("✅ Download test successful");
     }
-    
+
     // Clean up test file
-    await supabase.storage.from('user-projects').remove([testPath]);
-    console.log('✅ Storage access fully working');
-    
+    await supabase.storage.from("user-projects").remove([testPath]);
+    console.log("✅ Storage access fully working");
+
     return true;
-    
   } catch (error) {
-    console.error('❌ Storage check exception:', error);
-    
+    console.error("❌ Storage check exception:", error);
+
     // If we can't even try to upload, the bucket probably doesn't exist
-    if(error instanceof Error){
-    if (error.message && error.message.includes('Bucket not found')) {
-      console.log('❌ user-projects bucket does not exist');
-      return false;
+    if (error instanceof Error) {
+      if (error.message && error.message.includes("Bucket not found")) {
+        console.log("❌ user-projects bucket does not exist");
+        return false;
+      }
     }
-}
     // For other errors, assume bucket exists but has permission issues
-    console.log('⚠️  Assuming bucket exists despite error');
+    console.log("⚠️  Assuming bucket exists despite error");
     return true;
   }
 }

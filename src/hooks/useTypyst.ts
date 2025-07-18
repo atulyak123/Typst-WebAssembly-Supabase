@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 // Global cache to avoid re-loading
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,10 +30,10 @@ export function useTypst() {
 
       try {
         isLoading = true;
-        console.log('🔧 Loading Typst...');
-        
+        console.log("🔧 Loading Typst...");
+
         // Dynamic import - only on client side
-        const typstModule = await import('@myriaddreamin/typst-all-in-one.ts');
+        const typstModule = await import("@myriaddreamin/typst-all-in-one.ts");
         $typst = typstModule.$typst;
 
         // Wait for WebAssembly to initialize
@@ -42,11 +42,11 @@ export function useTypst() {
         }
 
         setIsReady(true);
-        console.log('✅ Typst ready!');
+        console.log("✅ Typst ready!");
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        const errorMsg = err instanceof Error ? err.message : "Unknown error";
         setError(errorMsg);
-        console.error('❌ Typst failed to load:', errorMsg);
+        console.error("❌ Typst failed to load:", errorMsg);
       } finally {
         isLoading = false;
       }

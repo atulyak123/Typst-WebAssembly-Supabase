@@ -1,18 +1,18 @@
-'use client'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Dashboard from '@/components/Dashboard'
-import { useAuth } from '@/context/auth-context'
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Dashboard from "@/components/Dashboard";
+import { useAuth } from "@/context/auth-context";
 
 export default function DashboardPage() {
-  const { user, isLoading, signOut } = useAuth()
-  const router = useRouter()
+  const { user, isLoading, signOut } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/login')
+      router.push("/login");
     }
-  }, [user, isLoading, router])
+  }, [user, isLoading, router]);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -23,14 +23,14 @@ export default function DashboardPage() {
           <p className="text-slate-600">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   // Don't render anything if user is not authenticated (redirect is happening)
   if (!user) {
-    return null
+    return null;
   }
 
   // Pass user info and signOut function to Dashboard component
-  return <Dashboard user={user} signOut={signOut} />
+  return <Dashboard user={user} signOut={signOut} />;
 }
