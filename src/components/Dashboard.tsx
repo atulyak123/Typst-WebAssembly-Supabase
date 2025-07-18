@@ -413,13 +413,14 @@ export default function Dashboard({ user, signOut }: DashboardProps) {
               {filteredProjects.map((project) => (
                 <Card
                   key={project.id}
-                  className="hover:shadow-md transition-shadow cursor-pointer group"
+                  className="hover:shadow-md transition-shadow cursor-pointer group rounded-none w-10/12 "
                   onClick={() => router.push(`/editor/${project.id}`)}
                 >
                   <CardContent className="p-4 relative">
-                    <div className="aspect-[4/3] bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg flex items-center justify-center mb-3">
+                    <div className="aspect-[210/297] w-full bg-gradient-to-br from-blue-50 to-blue-100 rounded-md flex items-center justify-center mb-3">
                       <span className="text-2xl">📄</span>
                     </div>
+
                     <h3 className="font-medium text-sm text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
                       {project.title}
                     </h3>

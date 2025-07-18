@@ -604,7 +604,6 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
                 {getUserName().charAt(0).toUpperCase()}
               </div>
             </div>
-          
           </div>
 
           {/* Save Button */}
@@ -644,19 +643,19 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
           >
             <FileDown size={18} />
           </button>
-            <button
-              onClick={handleSignOut}
-              title="Sign Out"
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: "1rem",
-                color: "#ef4444",
-              }}
-            >
-              <LogOut />
-            </button>
+          <button
+            onClick={handleSignOut}
+            title="Sign Out"
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "1rem",
+              color: "#ef4444",
+            }}
+          >
+            <LogOut />
+          </button>
         </div>
       </div>
 
@@ -670,7 +669,7 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
             }}
           />
         </div>
-        <div id="preview" >
+        <div id="preview" className="rounded-none">
           {!isTypstReady ? (
             <div className="placeholder">
               <div>Loading Typst compiler...</div>
