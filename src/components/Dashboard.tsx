@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Search, Grid, List, Settings, HelpCircle, FileText, Users, Home, BarChart, LogOut, RefreshCw, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -35,6 +34,21 @@ export default function Dashboard({ user, signOut }: DashboardProps) {
   // Load projects on component mount
   useEffect(() => {
     initializeDashboard();
+  }, []);
+
+  // Auto-refresh projects when the page becomes visible (user returns from editor)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadProjects();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const initializeDashboard = async () => {
@@ -87,8 +101,13 @@ export default function Dashboard({ user, signOut }: DashboardProps) {
       router.push(`/editor/${newProject.id}`);
       
     } catch (err) {
-      console.error('Failed to create document:', err);
-      alert(`Failed to create document: ${err.message}`);
+      if (err instanceof Error) {
+        console.error('Failed to create document:', err.message);
+        alert(`Failed to create document: ${err.message}`);
+      } else {
+        console.error('Unknown error:', err);
+        alert('Failed to create document due to unknown error.');
+      }
     } finally {
       setIsCreating(false);
     }
@@ -101,16 +120,24 @@ export default function Dashboard({ user, signOut }: DashboardProps) {
       await deleteProject(projectId, typPath);
       setProjects(prev => prev.filter(p => p.id !== projectId));
     } catch (err) {
-      console.error('Failed to delete project:', err);
-      alert(`Failed to delete project: ${err.message}`);
+      if (err instanceof Error) {
+        console.error('Failed to delete document:', err.message);
+        alert(`Failed to delete document: ${err.message}`);
+      } else {
+        console.error('Unknown error:', err);
+        alert('Failed to delete document due to unknown error.');
+      }
     }
   };
 
   const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('Error signing out:', error);
+    if (confirm('Are you sure you want to sign out?')) {
+      try {
+        await signOut();
+      } catch (error) {
+        console.error('Error signing out:', error);
+        alert('Failed to sign out. Please try again.');
+      }
     }
   };
 
@@ -135,8 +162,10 @@ export default function Dashboard({ user, signOut }: DashboardProps) {
     const then = new Date(date);
     const diffInMinutes = Math.floor((now.getTime() - then.getTime()) / (1000 * 60));
     
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes} minutes ago`;
+    if (diffInMinutes < 1) {
+      return 'Just now';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
     } else if (diffInMinutes < 1440) {
       const hours = Math.floor(diffInMinutes / 60);
       return `${hours} hour${hours > 1 ? 's' : ''} ago`;
@@ -237,6 +266,7 @@ export default function Dashboard({ user, signOut }: DashboardProps) {
                 size="sm" 
                 onClick={handleSignOut}
                 className="text-slate-500 hover:text-red-600"
+                title="Sign Out"
               >
                 <LogOut className="w-4 h-4" />
               </Button>
@@ -369,25 +399,6 @@ export default function Dashboard({ user, signOut }: DashboardProps) {
         {/* Shared with Me Section */}
         <div className="space-y-4">
           <h2 className="text-lg font-medium text-slate-900">Shared with me</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {/* Placeholder for when we have shared projects */}
-            {/* Example of how shared projects would look:
-            <Card className="hover:shadow-md transition-shadow cursor-pointer group">
-              <CardContent className="p-4">
-                <div className="aspect-[4/3] bg-gradient-to-br from-green-50 to-green-100 rounded-lg flex items-center justify-center mb-3">
-                  <span className="text-2xl">📋</span>
-                </div>
-                <h3 className="font-medium text-sm text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
-                  Team Proposal
-                </h3>
-                <p className="text-xs text-slate-500">John Doe</p>
-                <Badge variant="secondary" className="mt-2 text-xs">
-                  Shared
-                </Badge>
-              </CardContent>
-            </Card>
-            */}
-          </div>
           {/* Empty state for shared projects */}
           <div className="flex items-center justify-center py-12">
             <div className="text-center">

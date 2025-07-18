@@ -67,49 +67,6 @@ export async function loadProjectFile(path: string): Promise<string> {
   }
 }
 
-/* ---------- Save project file ---------- */
-export async function saveProjectFile(
-  projectId: string,
-  typPath: string,
-  code: string,
-): Promise<void> {
-  try {
-    console.log(`Saving file to ${typPath}, length: ${code.length}`);
-    
-    const supabase = getBrowserClient();
-    
-    // Upload file to storage
-    const { error: uploadError } = await supabase
-      .storage
-      .from('user-projects')
-      .upload(typPath, new Blob([code], { type: 'text/plain' }), { 
-        upsert: true,
-        contentType: 'text/plain'
-      });
-
-    if (uploadError) {
-      throw new Error(`File upload failed: ${uploadError.message}`);
-    }
-
-    // Update database timestamp
-    const { error: updateError } = await supabase
-      .from('projects')
-      .update({ 
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', projectId);
-
-    if (updateError) {
-      console.warn(`Database update failed: ${updateError.message}`);
-    }
-
-    console.log(`Successfully saved project ${projectId}`);
-    
-  } catch (error) {
-    console.error(`Error saving project file:`, error);
-    throw error;
-  }
-}
 
 /* ---------- Create new project with initial file ---------- */
 export async function createNewProject(userId: string, title: string = 'Untitled Document'): Promise<Project> {
@@ -156,6 +113,49 @@ export async function createNewProject(userId: string, title: string = 'Untitled
     
   } catch (error) {
     console.error('Error creating new project:', error);
+    throw error;
+  }
+}
+/* ---------- Save project file ---------- */
+export async function saveProjectFile(
+  projectId: string,
+  typPath: string,
+  code: string,
+): Promise<void> {
+  try {
+    console.log(`Saving file to ${typPath}, length: ${code.length}`);
+    
+    const supabase = getBrowserClient();
+    
+    // Upload file to storage
+    const { error: uploadError } = await supabase
+      .storage
+      .from('user-projects')
+      .upload(typPath, new Blob([code], { type: 'text/plain' }), { 
+        upsert: true,
+        contentType: 'text/plain'
+      });
+
+    if (uploadError) {
+      throw new Error(`File upload failed: ${uploadError.message}`);
+    }
+
+    // Update database timestamp
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ 
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', projectId);
+
+    if (updateError) {
+      console.warn(`Database update failed: ${updateError.message}`);
+    }
+
+    console.log(`Successfully saved project ${projectId}`);
+    
+  } catch (error) {
+    console.error(`Error saving project file:`, error);
     throw error;
   }
 }
@@ -258,11 +258,12 @@ export async function checkStorageAccess(): Promise<boolean> {
     console.error('❌ Storage check exception:', error);
     
     // If we can't even try to upload, the bucket probably doesn't exist
+    if(error instanceof Error){
     if (error.message && error.message.includes('Bucket not found')) {
       console.log('❌ user-projects bucket does not exist');
       return false;
     }
-    
+}
     // For other errors, assume bucket exists but has permission issues
     console.log('⚠️  Assuming bucket exists despite error');
     return true;

@@ -8,6 +8,7 @@ import { typstSyntax } from '../hooks/typystSyntax';
 import { useTypst } from '@/hooks/useTypyst';
 import { useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
+import { saveProjectFile, loadProjectFile, fetchUserProjects } from '@/lib/projectService';
 
 type Theme = 'light' | 'dark';
 
@@ -29,8 +30,14 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
   const router = useRouter();
 
   const [documentContent, setDocumentContent] = useState('');
+  const [projectTitle, setProjectTitle] = useState('');
+  const [typPath, setTypPath] = useState('');
   const [theme, setTheme] = useState<Theme>('light');
   const [isCompiling, setIsCompiling] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewContent, setPreviewContent] = useState(
     typstError 
   );
@@ -38,6 +45,7 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const compileTimerRef = useRef<number | undefined>(undefined);
+  const autoSaveTimerRef = useRef<number | undefined>(undefined);
   const hasCompiledOnceRef = useRef(false);
 
   // Helper function to get user name from email
@@ -57,9 +65,90 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     return 'User';
   };
 
+  // Load project data and content
+  const loadProjectData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get project metadata
+      const projects = await fetchUserProjects();
+      const project = projects.find(p => p.id === projectId);
+      
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      setProjectTitle(project.title);
+      setTypPath(project.typ_path);
+
+      // Load file content
+      const content = await loadProjectFile(project.typ_path);
+      setDocumentContent(content);
+      
+      // Update editor content
+      if (editorViewRef.current) {
+        editorViewRef.current.dispatch({
+          changes: { 
+            from: 0, 
+            to: editorViewRef.current.state.doc.length, 
+            insert: content 
+          }
+        });
+      }
+
+      setLastSaved(new Date(project.updated_at));
+      setHasUnsavedChanges(false);
+      debouncedCompile(content);
+
+      
+    } catch (error) {
+      console.error('Error loading project:', error);
+      alert('Failed to load project. Redirecting to dashboard.');
+      router.push('/dashboard');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId, router]);
+
+  // Save function
+  const saveDocument = useCallback(async () => {
+    if (!documentContent.trim() || !typPath || isSaving) return;
+
+    try {
+      setIsSaving(true);
+      await saveProjectFile(projectId, typPath, documentContent);
+      
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+      
+      // Visual feedback
+      console.log('Document saved successfully');
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to save document. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [documentContent, typPath, projectId, isSaving]);
+
+  // Auto-save function
+  const autoSave = useCallback(async () => {
+    if (hasUnsavedChanges && !isSaving && documentContent.trim() && typPath) {
+      console.log('Auto-saving document...');
+      await saveDocument();
+    }
+  }, [hasUnsavedChanges, isSaving, documentContent, typPath, saveDocument]);
+
   // Handle sign out
   const handleSignOut = async () => {
-    if (confirm('Are you sure you want to sign out? Make sure your work is saved.')) {
+    if (hasUnsavedChanges) {
+      const shouldSave = confirm('You have unsaved changes. Do you want to save before signing out?');
+      if (shouldSave) {
+        await saveDocument();
+      }
+    }
+    
+    if (confirm('Are you sure you want to sign out?')) {
       try {
         await signOut();
       } catch (error) {
@@ -70,8 +159,42 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
 
   // Navigate back to dashboard
   const handleBackToDashboard = () => {
+    if (hasUnsavedChanges) {
+      const shouldSave = confirm('You have unsaved changes. Do you want to save before leaving?');
+      if (shouldSave) {
+        saveDocument().then(() => {
+          router.push('/dashboard');
+        });
+        return;
+      }
+    }
     router.push('/dashboard');
   };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+S / Cmd+S to save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveDocument();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [saveDocument]);
+
+  // Auto-save every 60 seconds
+  useEffect(() => {
+    clearTimeout(autoSaveTimerRef.current);
+    
+    if (hasUnsavedChanges) {
+      autoSaveTimerRef.current = window.setTimeout(autoSave, 60000);
+    }
+
+    return () => clearTimeout(autoSaveTimerRef.current);
+  }, [hasUnsavedChanges, autoSave]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('typst-theme') as Theme | null;
@@ -81,6 +204,15 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     setTheme(initialTheme);
     document.documentElement.setAttribute('data-theme', initialTheme);
   }, []);
+
+  // Load project data on mount
+  useEffect(() => {
+    if (projectId && projectId !== 'new') {
+      loadProjectData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [projectId, loadProjectData]);
 
   const analyzePageRequirements = (totalHeight: number): PageAnalysis => {
     const STANDARD_PAGES = [
@@ -230,13 +362,21 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     }, 300);
   }, [compileAndRender]);
 
+  // ✅ FIXED: Moved this useEffect to the top level
   useEffect(() => {
-    if (!editorRef.current) return;
+    if (isTypstReady && documentContent && !isLoading) {
+      debouncedCompile(documentContent);
+    }
+  }, [isTypstReady, documentContent, isLoading, debouncedCompile]);
+
+  useEffect(() => {
+    if (!editorRef.current || isLoading) return;
 
     const updateListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         const newDoc = update.state.doc.toString();
         setDocumentContent(newDoc);
+        setHasUnsavedChanges(true);
         debouncedCompile(newDoc);
       }
     });
@@ -244,9 +384,9 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     const state = EditorState.create({
       doc: documentContent,
       extensions: [
-        basicSetup,
-        ...typstSyntax(),
-        updateListener,
+       basicSetup,
+    ...typstSyntax(),
+    updateListener,
         EditorView.theme({
           '&': { height: '100%' },
           '.cm-scroller': { fontFamily: 'Fira Code, Monaco, Consolas, monospace', padding: '1rem' },
@@ -264,7 +404,7 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     editorViewRef.current = view;
 
     return () => view.destroy();
-  }, [debouncedCompile]);
+  }, [debouncedCompile, documentContent, isLoading]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -285,12 +425,16 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
       const blob = new Blob([data], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
 
+      // Use project title or extract name from content
+      let filename = projectTitle || 'typst-output';
       const match = source.match(/#let\s+name\s*=\s*"(.+?)"/);
-      const name = match ? match[1].split(' ')[0] : 'typst-output';
+      if (match) {
+        filename = match[1].split(' ')[0];
+      }
 
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${name}.pdf`;
+      a.download = `${filename}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -299,18 +443,20 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     }
   };
 
-  useEffect(() => {
-    if (!documentContent) {
-      const sampleDoc = ``;
-      setDocumentContent(sampleDoc);
-
-      if (editorViewRef.current) {
-        editorViewRef.current.dispatch({
-          changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: sampleDoc }
-        });
-      }
-    }
-  }, []);
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '1.2rem'
+      }}>
+        Loading your document...
+      </div>
+    );
+  }
 
   return (
     <>
@@ -330,8 +476,40 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
             ← 
           </button>
           <span className="app-title">📄 Typst Editor</span>
-          {projectId && <span className="project-title">Project: {projectId}</span>}
+          {projectTitle && <span className="project-title">{projectTitle}</span>}
+          {hasUnsavedChanges && (
+            <span style={{ 
+              color: '#ef4444', 
+              fontSize: '0.8rem',
+              marginLeft: '0.5rem',
+              fontWeight: '500'
+            }}>
+              ● Unsaved
+            </span>
+          )}
         </div>
+        
+        <div className="toolbar-center">
+          {lastSaved && !hasUnsavedChanges && (
+            <span style={{ 
+              fontSize: '0.75rem', 
+              color: '#16a34a',
+              fontStyle: 'italic'
+            }}>
+              Saved {lastSaved.toLocaleTimeString()}
+            </span>
+          )}
+          {isSaving && (
+            <span style={{ 
+              fontSize: '0.75rem', 
+              color: '#3b82f6',
+              fontStyle: 'italic'
+            }}>
+              Saving...
+            </span>
+          )}
+        </div>
+
         <div className="toolbar-right">
           <div style={{ 
             display: 'flex', 
@@ -379,6 +557,25 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
               🚪
             </button>
           </div>
+          
+          {/* Save Button */}
+          <button 
+            onClick={saveDocument}
+            disabled={isSaving || !hasUnsavedChanges || !documentContent.trim()}
+            title={`Save Document (Ctrl+S)${hasUnsavedChanges ? ' - You have unsaved changes' : ''}`}
+            style={{
+              marginRight: '0.5rem',
+              opacity: (isSaving || (!hasUnsavedChanges && lastSaved)) ? 0.5 : 1,
+              cursor: (isSaving || (!hasUnsavedChanges && lastSaved)) ? 'not-allowed' : 'pointer',
+              fontSize: '1rem',
+              background: 'none',
+              border: 'none',
+              color: hasUnsavedChanges ? '#ef4444' : '#16a34a'
+            }}
+          >
+            {isSaving ? '⏳' : (hasUnsavedChanges ? '💾' : '✅')}
+          </button>
+          
           <button onClick={toggleTheme} title="Toggle theme">
             {theme === 'dark' ? '☀' : '🌙'}
           </button>

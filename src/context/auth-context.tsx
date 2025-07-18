@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasInitialSessionCheck, setHasInitialSessionCheck] = useState(false)
   const router = useRouter()
 
   // Initialize Supabase client only when needed
@@ -45,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data } = await supabase.auth.getSession()
         setSession(data.session)
         setUser(data.session?.user ?? null)
+        setHasInitialSessionCheck(true)
       } catch (error) {
         console.error("Error getting session:", error)
       } finally {
@@ -61,18 +63,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log('🔐 Auth state change:', event, session?.user?.id) // Debug log
+        
         setSession(session)
         setUser(session?.user ?? null)
         setIsLoading(false)
         
-        // Redirect to dashboard when user signs in
-        if (event === 'SIGNED_IN' && session?.user) {
-          router.push("/dashboard")
-        }
-        
-        // Redirect to login when user signs out
-        if (event === 'SIGNED_OUT') {
-          router.push("/login")
+        if (hasInitialSessionCheck) {
+          if (event === 'SIGNED_IN' && session?.user && !user) {
+            console.log('➡️ Redirecting to dashboard (new sign in)')
+            router.push("/dashboard")
+          }
+          
+          // Only redirect to login on actual sign out
+          if (event === 'SIGNED_OUT') {
+            console.log('➡️ Redirecting to login (signed out)')
+            router.push("/login")
+          }
         }
       })
 
@@ -83,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error setting up auth state change listener:", error)
       setIsLoading(false)
     }
-  }, [router])
+  }, [router, hasInitialSessionCheck, user])
 
   const signInWithMagicLink = async (email: string) => {
     try {

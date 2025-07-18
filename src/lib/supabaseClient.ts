@@ -32,7 +32,14 @@ export const getBrowserClient = () => {
     const supabaseUrl = getSupabaseUrl()
     const supabaseAnonKey = getSupabaseAnonKey()
 
-    browserClient = createClient<any>(supabaseUrl, supabaseAnonKey)
+    browserClient =createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,     
+    autoRefreshToken: true,  
+    detectSessionInUrl: true, 
+  },
+});
+
     return browserClient
   } catch (error) {
     console.error("Error creating Supabase client:", error)
@@ -57,7 +64,14 @@ export const getServerClient = () => {
       throw new Error("SUPABASE_ANON_KEY is required")
     }
 
-    return createClient<any>(supabaseUrl, supabaseAnonKey)
+    return createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,     
+    autoRefreshToken: true,  
+    detectSessionInUrl: true,
+  },
+});
+
   } catch (error) {
     console.error("Error creating Supabase server client:", error)
     throw error
