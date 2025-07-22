@@ -7,7 +7,13 @@ import { useTypst } from "@/hooks/useTypyst";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { lineNumbers, EditorView, keymap } from "@codemirror/view";
-import { history, historyKeymap, undo, redo, indentWithTab } from "@codemirror/commands";
+import {
+  history,
+  historyKeymap,
+  undo,
+  redo,
+  indentWithTab,
+} from "@codemirror/commands";
 import { defaultKeymap } from "@codemirror/commands";
 
 import {
@@ -446,21 +452,21 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     const state = EditorState.create({
       doc: documentContent,
       extensions: [
-       lineNumbers(),
-keymap.of([
-  ...historyKeymap,
-  ...defaultKeymap,
-  indentWithTab,
-  {
-    key: "Mod-z",
-    run: undo,
-  },
-  {
-    key: "Mod-Shift-z",
-    run: redo,
-  },
-]),
-history(),
+        lineNumbers(),
+        keymap.of([
+          ...historyKeymap,
+          ...defaultKeymap,
+          indentWithTab,
+          {
+            key: "Mod-z",
+            run: undo,
+          },
+          {
+            key: "Mod-Shift-z",
+            run: redo,
+          },
+        ]),
+        history(),
 
         ...typstSyntax(),
         updateListener,
