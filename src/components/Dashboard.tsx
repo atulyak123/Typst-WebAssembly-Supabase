@@ -413,18 +413,19 @@ export default function Dashboard({ user, signOut }: DashboardProps) {
               {filteredProjects.map((project) => (
                 <Card
                   key={project.id}
-                  className="hover:shadow-md transition-shadow cursor-pointer group rounded-none w-10/12 "
+                  className="hover:shadow-md transition-shadow cursor-pointer group rounded-none w-10/12 pb-6 pt-0"
                   onClick={() => router.push(`/editor/${project.id}`)}
                 >
-                  <CardContent className="p-4 relative">
+                  <CardContent className="relative px-0">
                     <div className="aspect-[210/297] w-full bg-gradient-to-br from-blue-50 to-blue-100 rounded-md flex items-center justify-center mb-3">
                       <span className="text-2xl">📄</span>
                     </div>
 
-                    <h3 className="font-medium text-sm text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
-                      {project.title}
+                    <h3 className="font-medium text-sm text-slate-900 mb-1 ml-5 group-hover:text-blue-600 transition-colors">
+                      {project.title.charAt(0).toUpperCase() +
+                        project.title.slice(1)}
                     </h3>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 ml-5">
                       {formatTimeAgo(project.updated_at)}
                     </p>
                     <Button

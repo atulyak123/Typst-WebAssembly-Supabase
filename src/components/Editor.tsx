@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { EditorView } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
-import { basicSetup } from "codemirror";
 import { typstSyntax } from "../hooks/typystSyntax";
 import { useTypst } from "@/hooks/useTypyst";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
+import { lineNumbers, EditorView, keymap } from "@codemirror/view";
+import { history, historyKeymap, undo, redo, indentWithTab } from "@codemirror/commands";
+import { defaultKeymap } from "@codemirror/commands";
+
 import {
   saveProjectFile,
   loadProjectFile,
@@ -401,30 +403,65 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     },
     [compileAndRender],
   );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (editorViewRef.current) {
+        editorViewRef.current.focus();
+      }
+    }, 100); // slight delay
 
-  // ✅ FIXED: Moved this useEffect to the top level
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   useEffect(() => {
     if (isTypstReady && documentContent && !isLoading) {
       debouncedCompile(documentContent);
     }
   }, [isTypstReady, documentContent, isLoading, debouncedCompile]);
-
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      console.log(
+        "Key pressed:",
+        e.key,
+        "Ctrl?",
+        e.ctrlKey,
+        "Meta?",
+        e.metaKey,
+      );
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+  const updateListener = EditorView.updateListener.of((update) => {
+    if (update.docChanged) {
+      const newDoc = update.state.doc.toString();
+      setDocumentContent(newDoc);
+      setHasUnsavedChanges(true);
+      debouncedCompile(newDoc);
+    }
+  });
   useEffect(() => {
     if (!editorRef.current || isLoading) return;
-
-    const updateListener = EditorView.updateListener.of((update) => {
-      if (update.docChanged) {
-        const newDoc = update.state.doc.toString();
-        setDocumentContent(newDoc);
-        setHasUnsavedChanges(true);
-        debouncedCompile(newDoc);
-      }
-    });
 
     const state = EditorState.create({
       doc: documentContent,
       extensions: [
-        basicSetup,
+       lineNumbers(),
+keymap.of([
+  ...historyKeymap,
+  ...defaultKeymap,
+  indentWithTab,
+  {
+    key: "Mod-z",
+    run: undo,
+  },
+  {
+    key: "Mod-Shift-z",
+    run: redo,
+  },
+]),
+history(),
+
         ...typstSyntax(),
         updateListener,
         EditorView.theme({
@@ -435,6 +472,21 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
           },
           ".cm-content": { padding: "0", caretColor: "#4f46e5" },
           ".cm-focused": { outline: "none" },
+          "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+            backgroundColor: "#3b82f6 !important",
+          },
+          "&.cm-focused .cm-content ::selection": {
+            backgroundColor: "#3b82f6",
+          },
+          ".cm-content ::selection": {
+            backgroundColor: "#93c5fd",
+          },
+          "&[data-theme='dark'] .cm-selectionBackground": {
+            backgroundColor: "#1d4ed8 !important",
+          },
+          "&[data-theme='dark'] .cm-content ::selection": {
+            backgroundColor: "#1d4ed8",
+          },
         }),
       ],
     });
@@ -445,9 +497,14 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
     });
 
     editorViewRef.current = view;
+    console.log(
+      "Extensions loaded:",
+      view.state.facet(EditorState.allowMultipleSelections),
+    );
 
+    console.log("EditorView initialized", view);
     return () => view.destroy();
-  }, [debouncedCompile, documentContent, isLoading]);
+  }, [debouncedCompile, isLoading]);
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";

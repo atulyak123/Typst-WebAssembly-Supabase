@@ -51,8 +51,6 @@ export default function Login() {
       );
       return;
     }
-   console.log("Build succeded")
-    // Start loading
     setStatus("busy");
     setMessage("");
     setMessageType("idle");

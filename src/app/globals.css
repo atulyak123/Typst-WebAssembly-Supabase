@@ -385,3 +385,19 @@ body {
     display: none;
   }
 }
+#editor .cm-focused .cm-selectionBackground,
+#editor .cm-selectionBackground {
+  background-color: #3b82f6 !important;
+}
+
+#editor .cm-content ::selection {
+  background-color: #93c5fd !important;
+}
+
+:root[data-theme="dark"] #editor .cm-selectionBackground {
+  background-color: #1d4ed8 !important;
+}
+
+:root[data-theme="dark"] #editor .cm-content ::selection {
+  background-color: #1d4ed8 !important;
+}
