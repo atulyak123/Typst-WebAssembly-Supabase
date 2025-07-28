@@ -389,22 +389,17 @@ export default function TypstEditor({ projectId, user, signOut }: EditorProps) {
       compileTimerRef.current = window.setTimeout(() => {
         const clean = text.trim();
 
-        if (clean.length < 10 && !hasCompiledOnceRef.current) {
+        // If there's no content, show placeholder
+        if (!clean.length) {
           setPreviewContent(
             '<div class="placeholder"><div>Start typing to see your document</div></div>',
           );
           return;
         }
 
+        // Always compile if there's content (removed the 10-character limitation)
         hasCompiledOnceRef.current = true;
-
-        if (clean.length) {
-          compileAndRender(clean);
-        } else {
-          setPreviewContent(
-            '<div class="placeholder"><div>Start typing to see your document</div></div>',
-          );
-        }
+        compileAndRender(clean);
       }, 300);
     },
     [compileAndRender],
