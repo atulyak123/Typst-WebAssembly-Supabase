@@ -1,8 +1,9 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# =====================================
+# 📦 DEPENDENCIES & PACKAGE MANAGERS
+# =====================================
+node_modules
+.pnpm-store
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -10,32 +11,56 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# =====================================
+# 🧪 TESTING FILES
+# =====================================
+coverage
 
-# next.js
-/.next/
-/out/
+# =====================================
+# ⚛ NEXT.JS BUILD OUTPUT
+# =====================================
+.next
+out
 
-# production
-/build
+# =====================================
+# 🚀 PRODUCTION BUILD OUTPUT
+# =====================================
+build
 
-# misc
+# =====================================
+# 🗂 MISC FILES
+# =====================================
 .DS_Store
 *.pem
 
-# debug
+# =====================================
+# 🐞 DEBUG LOGS
+# =====================================
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# =====================================
+# 🔐 ENVIRONMENT FILES
+# =====================================
+.env
+.env.*
+!.env.example   # allow a safe template
 
-# vercel
+# =====================================
+# 🌐 VERCEL
+# =====================================
 .vercel
 
-# typescript
+# =====================================
+# 📘 TYPESCRIPT ARTIFACTS
+# =====================================
 *.tsbuildinfo
 next-env.d.ts
+
+# =====================================
+# 🛠 GIT
+# =====================================
+.git
+.gitignore
